@@ -1,0 +1,38 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+error.log
+access.log
+forward_logs.txt
+request_logs.txt
+
+# Data files
+movies.csv
+users.json
+bot_stats.json
+
+# Backups
+backups/
+backup_*.csv
+backup_*.json
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
