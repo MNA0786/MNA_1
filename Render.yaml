@@ -1,6 +1,101 @@
+# render.yaml - Advanced Configuration
 services:
   - type: web
-    name: telegram-bot
-    env: docker
+    name: entertainment-tadka-telegram-bot
+    runtime: docker
+    region: singapore
     plan: free
     branch: main
+    
+    # Build configuration
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    
+    # Environment variables (some will be set in Render dashboard)
+    envVars:
+      # REQUIRED - Set in Render Dashboard Secrets
+      - key: BOT_TOKEN
+        sync: false
+      
+      # Channel Configuration
+      - key: MAIN_CHANNEL_ID
+        value: -1003181705395
+      - key: THEATER_CHANNEL_ID
+        value: -1002831605258
+      - key: BACKUP_CHANNEL_ID
+        value: -1002964109368
+      - key: REQUEST_GROUP_ID
+        value: -1003083386043
+      
+      # Private Channels (Disabled by default)
+      - key: PRIVATE_CHANNEL_1
+        value: -1003251791991
+      - key: PRIVATE_CHANNEL_2
+        value: -1002337293281
+      - key: PRIVATE_CHANNEL_3
+        value: -1003614546520
+      
+      # Bot Configuration
+      - key: OWNER_ID
+        value: "1080317415"
+      - key: BOT_USERNAME
+        value: "@EntertainmentTadkaBot"
+      - key: API_ID
+        value: "21944581"
+      - key: API_HASH
+        value: "7b1c174a5cd3466e25a976c39a791737"
+      
+      # Feature Toggles
+      - key: ENABLE_TYPING_INDICATOR
+        value: "true"
+      - key: ENABLE_PUBLIC_CHANNELS
+        value: "true"
+      - key: ENABLE_PRIVATE_CHANNELS
+        value: "true"
+      - key: MAINTENANCE_MODE
+        value: "false"
+      - key: LOG_FORWARDS
+        value: "true"
+      
+      # File Configuration
+      - key: CSV_FILE
+        value: "movies.csv"
+      - key: CSV_FORMAT
+        value: "movie_name,message_id,channel_id"
+      - key: USERS_FILE
+        value: "users.json"
+      - key: STATS_FILE
+        value: "bot_stats.json"
+      - key: BACKUP_DIR
+        value: "backups/"
+      
+      # Performance
+      - key: CACHE_EXPIRY
+        value: "300"
+      - key: ITEMS_PER_PAGE
+        value: "5"
+    
+    # Health check
+    healthCheckPath: /
+    healthCheckTimeout: 10
+    
+    # Resources
+    disk:
+      name: data-volume
+      mountPath: /var/www/html/data
+      sizeGB: 1
+    
+    # Auto-deploy
+    autoDeploy: true
+    
+    # Domains (optional)
+    domains:
+      - entertainment-tadka-bot.onrender.com
+    
+    # Notifications (optional)
+    # notifications:
+    #   - type: slack
+    #     channel: deployments
+    #     events:
+    #       - deploy_succeeded
+    #       - deploy_failed
