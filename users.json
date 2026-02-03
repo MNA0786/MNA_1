@@ -1,4 +1,87 @@
 {
-  "users": {},
-  "last_updated": "2024-01-01 00:00:00"
+  "users": {
+    "1080317415": {
+      "first_name": "Owner",
+      "last_name": "Admin",
+      "username": "entertainmenttadka",
+      "language_code": "en",
+      "joined": "2024-01-01 00:00:00",
+      "last_active": "2025-02-03 14:30:00",
+      "total_searches": 45,
+      "points": 100,
+      "is_admin": true,
+      "preferences": {
+        "language": "english",
+        "notifications": true,
+        "daily_digest": true
+      }
+    },
+    "123456789": {
+      "first_name": "Raj",
+      "username": "raj_movie_lover",
+      "joined": "2025-01-15 10:30:00",
+      "last_active": "2025-02-03 12:45:00",
+      "total_searches": 15,
+      "points": 75,
+      "is_admin": false,
+      "preferences": {
+        "language": "hindi",
+        "notifications": true
+      }
+    },
+    "987654321": {
+      "first_name": "Priya",
+      "username": "priya_entertainment",
+      "joined": "2025-01-20 14:20:00",
+      "last_active": "2025-02-03 10:15:00",
+      "total_searches": 28,
+      "points": 140,
+      "is_admin": false
+    },
+    "555666777": {
+      "first_name": "Amit",
+      "last_name": "Sharma",
+      "username": "amit_sharma",
+      "joined": "2025-01-25 09:10:00",
+      "last_active": "2025-02-02 18:30:00",
+      "total_searches": 32,
+      "points": 160,
+      "is_admin": false
+    },
+    "444333222": {
+      "first_name": "Neha",
+      "username": "neha_gupta",
+      "joined": "2025-02-01 11:45:00",
+      "last_active": "2025-02-03 08:20:00",
+      "total_searches": 8,
+      "points": 40,
+      "is_admin": false
+    }
+  },
+  "total_users": 5,
+  "total_requests": 125,
+  "last_updated": "2025-02-03 14:30:00",
+  "statistics": {
+    "daily_active_users": 15,
+    "weekly_active_users": 50,
+    "monthly_active_users": 200,
+    "total_searches_all_time": 1250,
+    "most_searched_movie": "KGF",
+    "search_count": {
+      "kgf": 45,
+      "pushpa": 38,
+      "rrr": 32,
+      "avengers": 28,
+      "spider_man": 25
+    },
+    "peak_hours": ["19:00", "20:00", "21:00"],
+    "average_searches_per_user": 25.5
+  },
+  "system": {
+    "csv_version": "2.0",
+    "last_csv_update": "2025-02-03",
+    "bot_version": "3.1.0",
+    "channels_active": 3,
+    "private_channels_active": 0
+  }
 }
