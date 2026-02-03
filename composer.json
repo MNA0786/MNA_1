@@ -1,13 +1,21 @@
 {
-    "name": "your-username/telegram-movie-bot",
+    "name": "entertainment-tadka/telegram-bot",
     "description": "Telegram Movie Bot for EntertainmentTadka",
     "type": "project",
     "require": {
-        "php": ">=8.0"
+        "php": ">=8.0",
+        "ext-curl": "*",
+        "ext-mysqli": "*",
+        "ext-zip": "*"
     },
     "autoload": {
         "psr-4": {
             "App\\": "src/"
         }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "chmod 666 movies.csv users.json bot_stats.json || true"
+        ]
     }
 }
