@@ -43,7 +43,7 @@ define('THEATER_CHANNEL_ID', $_ENV['THEATER_CHANNEL_ID'] ?? '-1002831605258');
 define('BACKUP_CHANNEL_ID', $_ENV['BACKUP_CHANNEL_ID'] ?? '-1002964109368');
 define('REQUEST_GROUP_ID', $_ENV['REQUEST_GROUP_ID'] ?? '-1003083386043');
 
-// Private Channels (will be OFF as per requirement)
+// Private Channels
 define('PRIVATE_CHANNEL_1', $_ENV['PRIVATE_CHANNEL_1'] ?? '-1003251791991');
 define('PRIVATE_CHANNEL_2', $_ENV['PRIVATE_CHANNEL_2'] ?? '-1002337293281');
 define('PRIVATE_CHANNEL_3', $_ENV['PRIVATE_CHANNEL_3'] ?? '-1003614546520');
@@ -61,6 +61,8 @@ define('ENABLE_TYPING_INDICATOR', filter_var($_ENV['ENABLE_TYPING_INDICATOR'] ??
 define('ENABLE_PUBLIC_CHANNELS', filter_var($_ENV['ENABLE_PUBLIC_CHANNELS'] ?? 'true', FILTER_VALIDATE_BOOLEAN));
 define('ENABLE_PRIVATE_CHANNELS', filter_var($_ENV['ENABLE_PRIVATE_CHANNELS'] ?? 'false', FILTER_VALIDATE_BOOLEAN));
 define('LOG_FORWARDS', filter_var($_ENV['LOG_FORWARDS'] ?? 'true', FILTER_VALIDATE_BOOLEAN));
+define('HIDE_PRIVATE_CHANNELS', true);
+define('MAX_MOVIES_PER_BATCH', 10);
 
 // Maintenance
 $MAINTENANCE_MODE = filter_var($_ENV['MAINTENANCE_MODE'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
@@ -337,6 +339,219 @@ function append_movie($movie_name, $message_id, $channel_id = null) {
     return true;
 }
 
+// ==================== AUTO-CORRECT SYSTEM ====================
+function auto_correct_suggestion($query) {
+    $common_typos = [
+        // KGF Series
+        'kgf' => ['kfg', 'kgff', 'k.g.f', 'k g f', 'kgf2', 'kgf 2'],
+        'kgf chapter 1' => ['kgf1', 'kgf 1', 'kgf part 1'],
+        'kgf chapter 2' => ['kgf2', 'kgf 2', 'kgf part 2', 'kgfchapter2'],
+        
+        // Pushpa Series
+        'pushpa' => ['pushpaa', 'pushpah', 'pushpa 1', 'pushpa1'],
+        'pushpa 2' => ['pushpa2', 'pushpa the rule', 'pushpa 2 the rule'],
+        
+        // Avengers Series
+        'avengers' => ['avangers', 'avnegers', 'avenegers', 'avenger'],
+        'avengers endgame' => ['endgame', 'avengers end game', 'avenger endgame'],
+        'avengers infinity war' => ['infinity war', 'avenger infinity war'],
+        
+        // Spider-Man Series
+        'spider-man' => ['spiderman', 'spider man', 'spider man'],
+        'spider-man no way home' => ['no way home', 'spiderman no way home'],
+        
+        // Bollywood Movies
+        'animal' => ['anymal', 'animaal', 'anima'],
+        'jawan' => ['jwaan', 'jvan', 'jawaan'],
+        'pathaan' => ['patan', 'pathan', 'pathaan'],
+        'dunki' => ['dunkki', 'dunkie', 'dunkee'],
+        
+        // South Indian Movies
+        'salaar' => ['salaaar', 'salaar part 1', 'salaar1'],
+        'rrr' => ['rr', 'r r r', 'rrr movie'],
+        'baahubali' => ['bahubali', 'baahubali 1', 'baahubali1'],
+        'baahubali 2' => ['bahubali 2', 'baahubali2', 'bahubali2'],
+        
+        // Common Hindi Words
+        'hindi' => ['hindhi', 'hindi movie', 'hindimovie'],
+        'english' => ['englis', 'inglish', 'english movie'],
+        'tamil' => ['tamill', 'thamizh', 'tamil movie'],
+        'telugu' => ['telugoo', 'telugu movie'],
+        
+        // Quality Terms
+        'hd' => ['high definition', 'h d', 'hd movie'],
+        '720p' => ['720', '720 p', '720p hd'],
+        '1080p' => ['1080', '1080 p', '1080p full hd'],
+        '4k' => ['4 k', '4k ultra hd', 'four k'],
+        
+        // Year Terms
+        '2025' => ['2024', '2026', '2023'],
+        '2024' => ['2023', '2025', '2024 movie'],
+        
+        // Theater Prints
+        'theater print' => ['theatre print', 'theaterprint', 'theatreprint'],
+        'bluray' => ['blue ray', 'blu-ray', 'blueray'],
+    ];
+    
+    $query_lower = strtolower(trim($query));
+    
+    // Check for exact typos
+    foreach ($common_typos as $correct => $typos) {
+        if (in_array($query_lower, $typos)) {
+            return $correct;
+        }
+    }
+    
+    // Check for partial matches
+    foreach ($common_typos as $correct => $typos) {
+        foreach ($typos as $typo) {
+            if (strpos($query_lower, $typo) !== false) {
+                return $correct;
+            }
+        }
+    }
+    
+    // Check for similar words using levenshtein distance
+    $all_words = array_keys($common_typos);
+    $best_match = '';
+    $best_distance = PHP_INT_MAX;
+    
+    foreach ($all_words as $word) {
+        $distance = levenshtein($query_lower, $word);
+        if ($distance < 3 && $distance < $best_distance) {
+            $best_distance = $distance;
+            $best_match = $word;
+        }
+    }
+    
+    if ($best_match && $best_distance <= 2) {
+        return $best_match;
+    }
+    
+    return false;
+}
+
+function get_did_you_mean_message($original, $corrected) {
+    $messages = [
+        "🤔 <b>Did you mean:</b> <code>$corrected</code>?",
+        "💡 <b>Auto-correct:</b> <code>$corrected</code>",
+        "🔍 <b>Searching for:</b> <code>$corrected</code> (instead of '$original')",
+        "🎯 <b>Suggested:</b> <code>$corrected</code>",
+        "✨ <b>Corrected to:</b> <code>$corrected</code>"
+    ];
+    
+    return $messages[array_rand($messages)];
+}
+
+// ==================== RELATED MOVIES SYSTEM ====================
+function get_related_movies($movie_name) {
+    $related_map = [
+        // KGF Series
+        'kgf' => ['KGF Chapter 1', 'KGF Chapter 2', 'Salaar', 'Ugramm', 'Mufti'],
+        'kgf chapter 1' => ['KGF Chapter 2', 'Salaar', 'Ugramm'],
+        'kgf chapter 2' => ['KGF Chapter 1', 'Salaar', 'Kabzaa'],
+        
+        // Pushpa Series
+        'pushpa' => ['Pushpa 2: The Rule', 'KGF', 'RRR', 'Baahubali'],
+        'pushpa 2' => ['Pushpa', 'RRR', 'KGF'],
+        
+        // Avengers Series
+        'avengers' => ['Avengers: Age of Ultron', 'Avengers: Infinity War', 'Avengers: Endgame', 
+                      'Iron Man', 'Captain America', 'Thor'],
+        'avengers endgame' => ['Avengers: Infinity War', 'Spider-Man: No Way Home', 'Captain Marvel'],
+        'avengers infinity war' => ['Avengers: Endgame', 'Black Panther', 'Doctor Strange'],
+        
+        // Spider-Man Series
+        'spider-man' => ['Spider-Man 2', 'Spider-Man 3', 'Spider-Man: No Way Home', 
+                        'The Amazing Spider-Man', 'Avengers'],
+        'spider-man no way home' => ['Spider-Man: Far From Home', 'Doctor Strange', 'Avengers'],
+        
+        // Bollywood Movies
+        'animal' => ['Kabir Singh', 'Arjun Reddy', 'Sultan', 'Dangal'],
+        'jawan' => ['Pathaan', 'Dunki', 'Fighter', 'Tiger Zinda Hai'],
+        'pathaan' => ['Jawan', 'Tiger Zinda Hai', 'War', 'Dhoom 3'],
+        'dunki' => ['PK', '3 Idiots', 'Sanju', 'Bajrangi Bhaijaan'],
+        
+        // South Indian Movies
+        'salaar' => ['KGF', 'Ugramm', 'Vikrant Rona', 'Kabzaa'],
+        'rrr' => ['Baahubali', 'Magadheera', 'Eega', 'Bahubali'],
+        'baahubali' => ['RRR', 'Magadheera', 'Eega', 'Bahubali 2'],
+        'baahubali 2' => ['Baahubali', 'RRR', 'Kantara'],
+        
+        // Hollywood Series
+        'fast and furious' => ['Fast X', 'Fast & Furious 9', 'Hobbs & Shaw', 'Transformers'],
+        'mission impossible' => ['Mission: Impossible 7', 'James Bond', 'Bourne Identity', 'Jack Reacher'],
+        'john wick' => ['John Wick 4', 'Extraction', 'The Equalizer', 'Nobody'],
+        
+        // Horror Movies
+        'conjuring' => ['Annabelle', 'The Nun', 'Insidious', 'Sinister'],
+        'it' => ['It Chapter Two', 'The Shining', 'Carrie', 'Pet Sematary'],
+        
+        // Animated Movies
+        'frozen' => ['Frozen 2', 'Moana', 'Tangled', 'Zootopia'],
+        'avatar' => ['Avatar 2', 'Avengers', 'Guardians of the Galaxy', 'Star Wars'],
+        
+        // By Actor/Director
+        'prabhas' => ['Salaar', 'Baahubali', 'Radhe Shyam', 'Adipurush'],
+        'yash' => ['KGF', 'Googly', 'Mr. and Mrs. Ramachari', 'Masterpiece'],
+        'allu arjun' => ['Pushpa', 'Ala Vaikunthapurramuloo', 'DJ', 'Julayi'],
+        'rajamouli' => ['RRR', 'Baahubali', 'Magadheera', 'Eega'],
+        'srk' => ['Jawan', 'Pathaan', 'Dunki', 'Chennai Express'],
+        'salman khan' => ['Tiger Zinda Hai', 'Bajrangi Bhaijaan', 'Sultan', 'Dabangg'],
+        
+        // By Genre
+        'comedy' => ['Golmaal', 'Hera Pheri', 'Dhamaal', 'Welcome'],
+        'action' => ['War', 'Tiger Zinda Hai', 'Singham', 'Dabangg'],
+        'romance' => ['Love Aaj Kal', 'Jab We Met', 'Hum Tum', 'Dilwale Dulhania Le Jayenge'],
+        'thriller' => ['Drishyam', 'Kahaani', 'Andhadhun', 'Badla'],
+    ];
+    
+    $movie_lower = strtolower(trim($movie_name));
+    
+    // Check exact match
+    if (isset($related_map[$movie_lower])) {
+        return $related_map[$movie_lower];
+    }
+    
+    // Check partial match
+    foreach ($related_map as $key => $movies) {
+        if (strpos($movie_lower, $key) !== false || strpos($key, $movie_lower) !== false) {
+            return $movies;
+        }
+    }
+    
+    // If no specific match, return popular movies
+    return ['KGF Chapter 2', 'Pushpa 2', 'Jawan', 'Animal', 'Salaar'];
+}
+
+function get_related_movies_message($movie_name, $related_movies) {
+    if (empty($related_movies)) {
+        return '';
+    }
+    
+    $messages = [
+        "🎬 <b>You searched \"$movie_name\", you might also like:</b>",
+        "🔥 <b>Related to \"$movie_name\":</b>",
+        "📚 <b>If you liked \"$movie_name\", try these:</b>",
+        "💡 <b>Similar to \"$movie_name\":</b>",
+        "🌟 <b>Recommended with \"$movie_name\":</b>"
+    ];
+    
+    $message = $messages[array_rand($messages)] . "\n\n";
+    
+    $shuffled = $related_movies;
+    shuffle($shuffled);
+    $selected = array_slice($shuffled, 0, min(5, count($shuffled)));
+    
+    foreach ($selected as $index => $movie) {
+        $message .= ($index + 1) . ". <code>$movie</code>\n";
+    }
+    
+    $message .= "\n💡 <b>Tip:</b> Just type any movie name to search!";
+    
+    return $message;
+}
+
 // ==================== REQUEST SYSTEM FUNCTIONS ====================
 function init_requests_file() {
     if (!file_exists(REQUESTS_FILE)) {
@@ -437,6 +652,36 @@ function get_all_requests_stats() {
 // Initialize requests file
 init_requests_file();
 
+// ==================== CHANNEL HELPER FUNCTIONS ====================
+function is_private_channel_id($channel_id) {
+    $private_channels = [
+        PRIVATE_CHANNEL_1,
+        PRIVATE_CHANNEL_2,  
+        PRIVATE_CHANNEL_3
+    ];
+    
+    return in_array($channel_id, $private_channels);
+}
+
+function get_channel_display_name($channel_id) {
+    if (HIDE_PRIVATE_CHANNELS && is_private_channel_id($channel_id)) {
+        // Show as main channel to user
+        return '@EntertainmentTadka786';
+    }
+    
+    // Map channel IDs to display names
+    $channel_map = [
+        MAIN_CHANNEL_ID => '@EntertainmentTadka786',
+        THEATER_CHANNEL_ID => '@threater_print_movies',
+        BACKUP_CHANNEL_ID => '@ETBackup',
+        PRIVATE_CHANNEL_1 => 'Private Channel 1',
+        PRIVATE_CHANNEL_2 => 'Private Channel 2',
+        PRIVATE_CHANNEL_3 => 'Private Channel 3'
+    ];
+    
+    return $channel_map[$channel_id] ?? 'Unknown Channel';
+}
+
 // ==================== FORWARDING FUNCTIONS ====================
 function deliver_item_to_chat($chat_id, $item) {
     // Show typing indicator
@@ -446,33 +691,98 @@ function deliver_item_to_chat($chat_id, $item) {
         $channel_id = $item['channel_id'] ?? MAIN_CHANNEL_ID;
         $movie_name = $item['movie_name'] ?? 'Unknown';
         
-        // Check if channel is active
-        if (!is_channel_active($channel_id)) {
-            $channel_id = find_active_channel($channel_id);
+        // DEBUG: Log which channel we're trying to forward from
+        error_log("DEBUG: Attempting to forward movie '$movie_name' from channel: $channel_id");
+        
+        // Check if it's a private channel
+        $is_private_channel = is_private_channel_id($channel_id);
+        
+        // If private channel and we want to hide it, use main channel for forwarding
+        if ($is_private_channel && HIDE_PRIVATE_CHANNELS) {
+            // Log for admin
+            error_log("SECRET: Forwarding '$movie_name' from private channel $channel_id " . 
+                     "but showing as from main channel");
+            
+            // Forward from private channel but user won't know
+            $actual_result = json_decode(forwardMessage($chat_id, $channel_id, $item['message_id']), true);
+            
+            if ($actual_result && isset($actual_result['ok']) && $actual_result['ok']) {
+                // Successfully forwarded from private channel
+                // User thinks it's from main channel
+                error_log("SUCCESS: Secret forward from private channel $channel_id");
+                return true;
+            } else {
+                // Private channel failed, try main channel
+                $channel_id = MAIN_CHANNEL_ID;
+                error_log("FALLBACK: Private channel failed, trying main channel");
+            }
+        }
+        
+        // Check if channel exists and bot has access
+        $channel_check = json_decode(apiRequest('getChat', ['chat_id' => $channel_id]), true);
+        
+        if (!$channel_check || !$channel_check['ok']) {
+            error_log("ERROR: Cannot access channel $channel_id. Error: " . 
+                     ($channel_check['description'] ?? 'Unknown'));
+            
+            // Try alternative channels
+            if ($channel_id == THEATER_CHANNEL_ID) {
+                error_log("INFO: Theater channel failed, trying main channel");
+                $channel_id = MAIN_CHANNEL_ID;
+            } elseif ($channel_id == BACKUP_CHANNEL_ID) {
+                error_log("INFO: Backup channel failed, trying main channel");
+                $channel_id = MAIN_CHANNEL_ID;
+            }
         }
         
         // Forward the message
         $result = json_decode(forwardMessage($chat_id, $channel_id, $item['message_id']), true);
         
         if ($result && isset($result['ok']) && $result['ok']) {
+            error_log("SUCCESS: Forwarded '$movie_name' from channel $channel_id to user $chat_id");
+            
             if (LOG_FORWARDS) {
                 log_forward($chat_id, $channel_id, $movie_name, true);
             }
             return true;
         } else {
-            // Fallback: copy message
-            copyMessage($chat_id, $channel_id, $item['message_id']);
-            if (LOG_FORWARDS) {
-                log_forward($chat_id, $channel_id, $movie_name, false);
+            error_log("ERROR: Forward failed for '$movie_name' from $channel_id. Result: " . 
+                     json_encode($result));
+            
+            // Try copyMessage as fallback
+            $copy_result = json_decode(copyMessage($chat_id, $channel_id, $item['message_id']), true);
+            
+            if ($copy_result && isset($copy_result['ok']) && $copy_result['ok']) {
+                error_log("SUCCESS: Used copyMessage for '$movie_name' from $channel_id");
+                
+                if (LOG_FORWARDS) {
+                    log_forward($chat_id, $channel_id, $movie_name, false);
+                }
+                return true;
+            } else {
+                error_log("CRITICAL: Both forward and copy failed for '$movie_name'");
+                
+                // Ultimate fallback - send channel links
+                $fallback_msg = "🎬 <b>" . htmlspecialchars($movie_name) . "</b>\n\n";
+                $fallback_msg .= "❌ <b>Could not forward from channel!</b>\n\n";
+                $fallback_msg .= "📢 <b>Join our channels to access:</b>\n";
+                $fallback_msg .= "🍿 Main: @EntertainmentTadka786\n";
+                $fallback_msg .= "🎭 Theater: @threater_print_movies\n";
+                $fallback_msg .= "🔒 Backup: @ETBackup";
+                
+                sendMessage($chat_id, $fallback_msg, null, 'HTML');
+                return false;
             }
-            return true;
         }
     }
     
     // Fallback text message
     $text = "🎬 " . ($item['movie_name'] ?? 'Unknown') . "\n";
-    $text .= "📢 Join: @EntertainmentTadka786\n";
-    $text .= "💬 Requests: @EntertainmentTadka7860";
+    $text .= "📢 Join our channels:\n";
+    $text .= "🍿 Main: @EntertainmentTadka786\n";
+    $text .= "🎭 Theater: @threater_print_movies\n";
+    $text .= "🔒 Backup: @ETBackup\n";
+    $text .= "📥 Requests: @EntertainmentTadka7860";
     sendMessage($chat_id, $text, null, 'HTML');
     return false;
 }
@@ -578,7 +888,8 @@ function advanced_search($chat_id, $query, $user_id = null) {
     
     sendTypingAction($chat_id);
     
-    $q = strtolower(trim($query));
+    $original_query = trim($query);
+    $q = strtolower($original_query);
     
     // Minimum length check
     if (strlen($q) < 2) {
@@ -586,32 +897,21 @@ function advanced_search($chat_id, $query, $user_id = null) {
         return;
     }
     
-    // Invalid keywords filter
-    $invalid_keywords = [
-        'vlc', 'audio', 'track', 'change', 'open', 'kar', 'me', 'hai',
-        'how', 'what', 'problem', 'issue', 'help', 'solution', 'fix',
-        'error', 'not working', 'download', 'play', 'video', 'sound',
-        'subtitle', 'quality', 'hd', 'full', 'part', 'scene'
-    ];
+    // ========== AUTO-CORRECT SYSTEM ==========
+    $corrected_query = auto_correct_suggestion($q);
+    $was_corrected = false;
     
-    $query_words = explode(' ', $q);
-    $invalid_count = 0;
-    foreach ($query_words as $word) {
-        if (in_array($word, $invalid_keywords)) {
-            $invalid_count++;
-        }
+    if ($corrected_query && $corrected_query != $q) {
+        $was_corrected = true;
+        $correction_msg = get_did_you_mean_message($original_query, $corrected_query);
+        $search_msg = "$correction_msg\n\n";
+        $search_msg .= "⏳ <b>Searching...</b>";
+        
+        $search_message = sendMessage($chat_id, $search_msg, null, 'HTML');
+        $q = $corrected_query;
     }
     
-    if ($invalid_count > 0 && ($invalid_count / count($query_words)) > 0.5) {
-        $help_msg = "🎬 Please enter a movie name!\n\n";
-        $help_msg .= "🔍 Examples:\n";
-        $help_msg .= "• kgf\n• pushpa\n• avengers\n• spider-man\n\n";
-        $help_msg .= "❌ Don't type technical queries\n\n";
-        $help_msg .= "📢 Join: @EntertainmentTadka786";
-        sendMessage($chat_id, $help_msg, null, 'HTML');
-        return;
-    }
-    
+    // ========== SMART SEARCH ==========
     $found = smart_search($q);
     
     if (!empty($found)) {
@@ -626,13 +926,17 @@ function advanced_search($chat_id, $query, $user_id = null) {
         $first_movie = array_key_first($found);
         $entries = $found[$first_movie]['entries'];
         
-        // Show searching message
-        $search_msg = "🔍 <b>Found " . count($found) . " matches</b>\n";
-        $search_msg .= "🎬 <b>Total videos:</b> $total_movies\n";
-        $search_msg .= "⏳ <b>Forwarding...</b>\n\n";
-        $search_msg .= "📢 <b>Join:</b> @EntertainmentTadka786";
-        
-        $search_message = sendMessage($chat_id, $search_msg, null, 'HTML');
+        // Show searching message with ALL public channels
+        if (!$was_corrected) {
+            $search_msg = "✅ <b>'" . htmlspecialchars($original_query) . "' ke $total_movies items ka info mil gaya!</b>\n\n";
+            $search_msg .= "📢 <b>Join our channels:</b>\n";
+            $search_msg .= "🍿 Main: @EntertainmentTadka786\n";
+            $search_msg .= "🎭 Theater: @threater_print_movies\n";
+            $search_msg .= "🔒 Backup: @ETBackup\n\n";
+            $search_msg .= "⏳ <b>Forwarding...</b>";
+            
+            $search_message = sendMessage($chat_id, $search_msg, null, 'HTML');
+        }
         
         // Forward ALL movies from first match
         if (!empty($entries)) {
@@ -648,113 +952,85 @@ function advanced_search($chat_id, $query, $user_id = null) {
             }
         }
         
-        // Show summary
+        // ========== RELATED MOVIES SUGGESTION ==========
+        $related_movies = get_related_movies($q);
+        $related_message = '';
+        
+        if (count($related_movies) > 0 && $forwarded_count > 0) {
+            $related_message = "\n\n" . get_related_movies_message($original_query, $related_movies);
+        }
+        
+        // Show summary with ALL channels
         $summary_msg = "✅ <b>Search Complete!</b>\n\n";
-        $summary_msg .= "🔍 <b>Search:</b> " . htmlspecialchars($query) . "\n";
+        
+        if ($was_corrected) {
+            $summary_msg .= "💡 <b>Auto-corrected from:</b> '$original_query'\n";
+            $summary_msg .= "🔍 <b>Searched for:</b> '$corrected_query'\n";
+        } else {
+            $summary_msg .= "🔍 <b>Search:</b> " . htmlspecialchars($original_query) . "\n";
+        }
+        
         $summary_msg .= "🎬 <b>Matches found:</b> " . count($found) . "\n";
-        $summary_msg .= "📹 <b>Videos forwarded:</b> $forwarded_count\n\n";
+        $summary_msg .= "📹 <b>Videos forwarded:</b> $forwarded_count\n";
         
         // Show match list
         if (count($found) > 1) {
-            $summary_msg .= "📋 <b>All matches:</b>\n";
+            $summary_msg .= "\n📋 <b>All matches:</b>\n";
             $match_num = 1;
             foreach ($found as $movie_name => $data) {
                 $summary_msg .= "$match_num. $movie_name (" . $data['count'] . " videos)\n";
                 $match_num++;
-                if ($match_num > 10) {
-                    $summary_msg .= "... and " . (count($found) - 10) . " more\n";
+                if ($match_num > 5) {
+                    $summary_msg .= "... and " . (count($found) - 5) . " more\n";
                     break;
                 }
             }
         }
         
-        $summary_msg .= "\n📢 <b>Join:</b> @EntertainmentTadka786";
+        // Add ALL public channels in summary
+        $summary_msg .= "\n📢 <b>Join our channels:</b>\n";
+        $summary_msg .= "🍿 Main: @EntertainmentTadka786\n";
+        $summary_msg .= "🎭 Theater: @threater_print_movies\n";
+        $summary_msg .= "🔒 Backup: @ETBackup\n";
+        $summary_msg .= "📥 Requests: @EntertainmentTadka7860";
+        
+        // Add related movies if any
+        $summary_msg .= $related_message;
         
         // Edit the original search message
         editMessage($chat_id, $search_message, $summary_msg, null, 'HTML');
         
     } else {
+        // ========== NO RESULTS - SUGGEST ALTERNATIVES ==========
+        $related_movies = get_related_movies($q);
+        $suggestion_msg = '';
+        
+        if (count($related_movies) > 0) {
+            $suggestion_msg = "\n\n" . get_related_movies_message($original_query, $related_movies);
+        }
+        
         $msg = "😔 <b>Movie Not Found!</b>\n\n";
-        $msg .= "🎬 <b>Requested:</b> " . htmlspecialchars($query) . "\n\n";
+        $msg .= "🎬 <b>Requested:</b> " . htmlspecialchars($original_query) . "\n\n";
+        
+        // Check for auto-correct even in not found case
+        $corrected = auto_correct_suggestion($q);
+        if ($corrected && $corrected != $q) {
+            $msg .= "💡 <b>Did you mean:</b> <code>$corrected</code>?\n\n";
+        }
+        
         $msg .= "📝 <b>Request it here:</b>\n";
         $msg .= "@EntertainmentTadka7860\n\n";
         $msg .= "🔔 <b>I'll notify you when it's added!</b>\n\n";
-        $msg .= "📢 <b>Join:</b> @EntertainmentTadka786";
+        $msg .= "📢 <b>Join our channels:</b>\n";
+        $msg .= "🍿 Main: @EntertainmentTadka786\n";
+        $msg .= "🎭 Theater: @threater_print_movies\n";
+        $msg .= "🔒 Backup: @ETBackup";
+        
+        // Add suggestions
+        $msg .= $suggestion_msg;
         
         sendMessage($chat_id, $msg, null, 'HTML');
     }
-}
-
-// ==================== REQUEST GROUP HANDLER ====================
-function handle_request_group($message) {
-    $chat_id = $message['chat']['id'];
-    $text = $message['text'] ?? '';
-    
-    if ($chat_id == REQUEST_GROUP_ID && !empty($text) && strpos($text, '/') !== 0) {
-        sendTypingAction($chat_id);
-        
-        $query = trim($text);
-        if (is_movie_request($query)) {
-            $user_name = $message['from']['first_name'] ?? 'User';
-            $user_id = $message['from']['id'] ?? 0;
-            
-            $reply = "✅ <b>Request Received!</b>\n\n";
-            $reply .= "🎬 <b>Movie:</b> " . htmlspecialchars($query) . "\n";
-            $reply .= "👤 <b>By:</b> $user_name\n";
-            $reply .= "⏰ <b>Time:</b> " . date('H:i:s') . "\n\n";
-            $reply .= "We'll add it soon!\n";
-            $reply .= "Check: @EntertainmentTadka786";
-            
-            sendMessage($chat_id, $reply, null, 'HTML');
-            
-            // Log request
-            $log = date('Y-m-d H:i:s') . " | User: $user_id ($user_name) | Request: $query\n";
-            file_put_contents('request_logs.txt', $log, FILE_APPEND);
-            
-            // Notify owner
-            if (OWNER_ID) {
-                $admin_msg = "📥 <b>New Movie Request</b>\n\n";
-                $admin_msg .= "🎬 <b>Movie:</b> " . htmlspecialchars($query) . "\n";
-                $admin_msg .= "👤 <b>User:</b> $user_name\n";
-                $admin_msg .= "🆔 <b>User ID:</b> $user_id\n";
-                $admin_msg .= "💬 <b>From:</b> Request Group\n";
-                $admin_msg .= "⏰ <b>Time:</b> " . date('H:i:s');
-                
-                sendMessage(OWNER_ID, $admin_msg, null, 'HTML');
-            }
-            
-            return true;
-        }
-    }
-    
-    return false;
-}
-
-function is_movie_request($text) {
-    $text_lower = strtolower(trim($text));
-    
-    // Skip common non-movie messages
-    $skip_patterns = ['hi', 'hello', 'hey', 'thanks', 'thank', 'please', 'help', 'ok', 'yes', 'no'];
-    foreach ($skip_patterns as $pattern) {
-        if (strpos($text_lower, $pattern) === 0) {
-            return false;
-        }
-    }
-    
-    // Movie indicators
-    $movie_indicators = ['movie', 'film', 'download', 'watch', 'hd', '720p', '1080p'];
-    foreach ($movie_indicators as $indicator) {
-        if (strpos($text_lower, $indicator) !== false) {
-            return true;
-        }
-    }
-    
-    // Check if it looks like a movie name
-    if (strlen($text) >= 3 && preg_match('/^[a-zA-Z0-9\s\-\.\,\(\)\&\'\"]+$/', $text)) {
-        return true;
-    }
-    
-    return false;
 }
 
 // ==================== PAGINATION FUNCTIONS ====================
@@ -762,25 +1038,49 @@ function get_all_movies_list() {
     $movies = load_movies_from_csv();
     $list = [];
     
+    if (empty($movies)) {
+        error_log("ERROR: No movies found in CSV!");
+        return [];
+    }
+    
     foreach ($movies as $movie) {
+        // Validate required fields
+        if (empty($movie['movie_name']) || empty($movie['message_id'])) {
+            error_log("WARNING: Skipping movie with missing fields: " . json_encode($movie));
+            continue;
+        }
+        
         $list[] = [
             'name' => $movie['movie_name'],
             'message_id' => $movie['message_id'],
-            'channel_id' => $movie['channel_id']
+            'channel_id' => $movie['channel_id'] ?? MAIN_CHANNEL_ID
         ];
     }
     
-    // Sort by name
+    // Sort by name (case-insensitive)
     usort($list, function($a, $b) {
         return strcasecmp($a['name'], $b['name']);
     });
     
+    error_log("DEBUG: get_all_movies_list() returned " . count($list) . " movies");
     return $list;
 }
 
 function paginate_movies($all_movies, $page = 1) {
     $per_page = ITEMS_PER_PAGE;
     $total = count($all_movies);
+    
+    if ($total === 0) {
+        error_log("ERROR: paginate_movies() received empty array!");
+        return [
+            'slice' => [],
+            'page' => 1,
+            'total_pages' => 1,
+            'total' => 0,
+            'per_page' => $per_page
+        ];
+    }
+    
     $total_pages = ceil($total / $per_page);
     
     // Validate page number
@@ -789,6 +1089,8 @@ function paginate_movies($all_movies, $page = 1) {
     
     $offset = ($page - 1) * $per_page;
     $slice = array_slice($all_movies, $offset, $per_page);
+    
+    error_log("DEBUG: Pagination - Page: $page, Total: $total, Pages: $total_pages, Showing: " . count($slice));
     
     return [
         'slice' => $slice,
@@ -803,41 +1105,166 @@ function build_totalupload_keyboard($current_page, $total_pages) {
     $keyboard = [];
     
     if ($total_pages <= 1) {
-        return null;
+        // Single page - no navigation needed
+        $keyboard[] = [
+            ['text' => '📤 Send This Page', 'callback_data' => 'tu_view_' . $current_page],
+            ['text' => '❌ Close', 'callback_data' => 'tu_stop']
+        ];
+        
+        return ['inline_keyboard' => $keyboard];
     }
     
-    $row = [];
+    // Navigation row
+    $nav_row = [];
     
     if ($current_page > 1) {
-        $row[] = ['text' => '◀️ Previous', 'callback_data' => 'tu_prev_' . ($current_page - 1)];
+        $nav_row[] = ['text' => '◀️ Previous', 'callback_data' => 'tu_prev_' . ($current_page - 1)];
     }
     
-    $row[] = ['text' => "📄 $current_page/$total_pages", 'callback_data' => 'current_page'];
+    $nav_row[] = ['text' => "📄 $current_page/$total_pages", 'callback_data' => 'current_page'];
     
     if ($current_page < $total_pages) {
-        $row[] = ['text' => 'Next ▶️', 'callback_data' => 'tu_next_' . ($current_page + 1)];
+        $nav_row[] = ['text' => 'Next ▶️', 'callback_data' => 'tu_next_' . ($current_page + 1)];
     }
     
-    $keyboard[] = $row;
+    $keyboard[] = $nav_row;
     
-    // View current page button
-    $keyboard[] = [
-        ['text' => '📤 Send This Page', 'callback_data' => 'tu_view_' . $current_page],
-        ['text' => '❌ Stop', 'callback_data' => 'tu_stop']
+    // Action row
+    $action_row = [
+        ['text' => '📤 Send This Page', 'callback_data' => 'tu_view_' . $current_page]
     ];
+    
+    if ($current_page > 1) {
+        $action_row[] = ['text' => '⏮️ First Page', 'callback_data' => 'tu_prev_1'];
+    }
+    
+    $action_row[] = ['text' => '❌ Close', 'callback_data' => 'tu_stop'];
+    
+    $keyboard[] = $action_row;
+    
+    // Jump to page row (for many pages)
+    if ($total_pages > 5) {
+        $jump_row = [];
+        $steps = [1, round($total_pages/4), round($total_pages/2), round($total_pages*3/4), $total_pages];
+        $steps = array_unique($steps);
+        
+        foreach ($steps as $step) {
+            if ($step != $current_page && $step >= 1 && $step <= $total_pages) {
+                $jump_row[] = ['text' => "📄 $step", 'callback_data' => 'tu_prev_' . $step];
+            }
+        }
+        
+        if (!empty($jump_row)) {
+            $keyboard[] = $jump_row;
+        }
+    }
     
     return ['inline_keyboard' => $keyboard];
 }
 
 function forward_page_movies($chat_id, $movies) {
-    foreach ($movies as $movie) {
-        deliver_item_to_chat($chat_id, [
+    if (empty($movies)) {
+        error_log("ERROR: forward_page_movies() received empty movies array!");
+        return 0;
+    }
+    
+    // Limit batch size
+    if (count($movies) > MAX_MOVIES_PER_BATCH) {
+        $movies = array_slice($movies, 0, MAX_MOVIES_PER_BATCH);
+        error_log("WARNING: Limiting batch to " . MAX_MOVIES_PER_BATCH . " movies");
+    }
+    
+    $forwarded_count = 0;
+    $total_movies = count($movies);
+    
+    foreach ($movies as $index => $movie) {
+        if (empty($movie['name']) || empty($movie['message_id'])) {
+            error_log("WARNING: Skipping invalid movie at index $index: " . json_encode($movie));
+            continue;
+        }
+        
+        // Prepare item for deliver_item_to_chat
+        $item = [
             'movie_name' => $movie['name'],
             'message_id' => $movie['message_id'],
-            'channel_id' => $movie['channel_id']
-        ]);
-        usleep(200000); // 0.2 second delay
+            'channel_id' => $movie['channel_id'] ?? MAIN_CHANNEL_ID
+        ];
+        
+        // Forward the movie
+        $success = deliver_item_to_chat($chat_id, $item);
+        
+        if ($success) {
+            $forwarded_count++;
+            error_log("SUCCESS: Forwarded movie '{$movie['name']}' to user $chat_id");
+        } else {
+            error_log("ERROR: Failed to forward movie '{$movie['name']}' to user $chat_id");
+        }
+        
+        // Progress indicator for large batches
+        if ($total_movies > 5 && $index % 3 === 0) {
+            $progress = round(($index + 1) / $total_movies * 100);
+            error_log("PROGRESS: $progress% - $forwarded_count/$total_movies forwarded");
+        }
+        
+        // Rate limiting
+        usleep(500000); // 0.5 second delay between forwards
     }
+    
+    error_log("DEBUG: forward_page_movies() forwarded $forwarded_count out of " . count($movies) . " movies");
+    return $forwarded_count;
+}
+
+function totalupload_controller($chat_id, $page = 1) {
+    // Show typing indicator
+    sendTypingAction($chat_id);
+    
+    $all = get_all_movies_list();
+    
+    if (empty($all)) {
+        $msg = "📭 <b>No Movies Found!</b>\n\n";
+        $msg .= "🎬 Database is currently empty\n";
+        $msg .= "📢 Add movies to channels\n";
+        $msg .= "💬 Join: @EntertainmentTadka7860 for requests\n\n";
+        $msg .= "🔧 <b>Check CSV file:</b> " . CSV_FILE;
+        
+        sendMessage($chat_id, $msg, null, 'HTML');
+        
+        error_log("ERROR: totalupload_controller() - No movies found in database");
+        return;
+    }
+    
+    $pg = paginate_movies($all, (int)$page);
+    
+    // Send initial message
+    $title = "🎬 <b>Total Uploads</b>\n\n";
+    $title .= "📊 <b>Statistics:</b>\n";
+    $title .= "• Total Movies: <b>{$pg['total']}</b>\n";
+    $title .= "• Current Page: <b>{$pg['page']}/{$pg['total_pages']}</b>\n";
+    $title .= "• Showing: <b>" . count($pg['slice']) . " movies</b>\n\n";
+    
+    // Current page movies list
+    $title .= "📋 <b>Current Page Movies:</b>\n";
+    $i = 1;
+    foreach ($pg['slice'] as $movie) {
+        $movie_name = htmlspecialchars($movie['name'] ?? 'Unknown');
+        $title .= "$i. {$movie_name}\n";
+        $i++;
+    }
+    
+    $title .= "\n📍 <b>Navigation:</b> Use buttons below";
+    $title .= "\n📢 <b>Join:</b> @EntertainmentTadka786";
+    
+    $kb = build_totalupload_keyboard($pg['page'], $pg['total_pages']);
+    $message = sendMessage($chat_id, $title, $kb, 'HTML');
+    
+    // Store message ID for callback handling
+    if ($message && isset($message['result']['message_id'])) {
+        $message_id = $message['result']['message_id'];
+        error_log("DEBUG: Sent totalupload message ID: $message_id for page $page");
+    }
+    
+    // Don't auto-forward movies - let user click "Send This Page"
+    // This prevents flooding and Telegram rate limits
 }
 
 // ==================== DATE STATISTICS ====================
@@ -937,8 +1364,36 @@ if ($update) {
         sendTypingAction($chat_id);
         
         // Handle request group first
-        if (handle_request_group($message)) {
-            exit;
+        if ($chat_id == REQUEST_GROUP_ID && !empty($text) && strpos($text, '/') !== 0) {
+            $query = trim($text);
+            if (is_movie_request($query)) {
+                $reply = "✅ <b>Request Received!</b>\n\n";
+                $reply .= "🎬 <b>Movie:</b> " . htmlspecialchars($query) . "\n";
+                $reply .= "👤 <b>By:</b> $user_name\n";
+                $reply .= "⏰ <b>Time:</b> " . date('H:i:s') . "\n\n";
+                $reply .= "We'll add it soon!\n";
+                $reply .= "Check: @EntertainmentTadka786";
+                
+                sendMessage($chat_id, $reply, null, 'HTML');
+                
+                // Log request
+                $log = date('Y-m-d H:i:s') . " | User: $user_id ($user_name) | Request: $query\n";
+                file_put_contents('request_logs.txt', $log, FILE_APPEND);
+                
+                // Notify owner
+                if (OWNER_ID) {
+                    $admin_msg = "📥 <b>New Movie Request</b>\n\n";
+                    $admin_msg .= "🎬 <b>Movie:</b> " . htmlspecialchars($query) . "\n";
+                    $admin_msg .= "👤 <b>User:</b> $user_name\n";
+                    $admin_msg .= "🆔 <b>User ID:</b> $user_id\n";
+                    $admin_msg .= "💬 <b>From:</b> Request Group\n";
+                    $admin_msg .= "⏰ <b>Time:</b> " . date('H:i:s');
+                    
+                    sendMessage(OWNER_ID, $admin_msg, null, 'HTML');
+                }
+                
+                exit;
+            }
         }
         
         // Update user stats
@@ -1266,6 +1721,74 @@ if ($update) {
                 
                 sendMessage($chat_id, $msg, null, 'HTML');
             }
+            elseif ($command == '/debugcsv') {
+                $movies = load_movies_from_csv();
+                $msg = "🔧 <b>CSV Debug Info</b>\n\n";
+                $msg .= "📁 <b>File:</b> " . CSV_FILE . "\n";
+                $msg .= "📊 <b>Total Rows:</b> " . count($movies) . "\n";
+                $msg .= "📄 <b>Format:</b> " . CSV_FORMAT . "\n\n";
+                
+                // Check first few rows
+                if (count($movies) > 0) {
+                    $msg .= "🎬 <b>Sample Data (first 3):</b>\n";
+                    for ($i = 0; $i < min(3, count($movies)); $i++) {
+                        $msg .= ($i + 1) . ". " . $movies[$i]['movie_name'] . 
+                               " (ID: " . ($movies[$i]['message_id'] ?? 'N/A') . ")\n";
+                    }
+                } else {
+                    $msg .= "❌ <b>CSV is empty or not found!</b>\n";
+                }
+                
+                sendMessage($chat_id, $msg, null, 'HTML');
+            }
+            elseif ($command == '/testpagination') {
+                // Test pagination with sample data
+                $all_movies = get_all_movies_list();
+                $msg = "🧪 <b>Pagination Test</b>\n\n";
+                $msg .= "📊 <b>Total Movies:</b> " . count($all_movies) . "\n";
+                
+                if (count($all_movies) > 0) {
+                    $test_page = 1;
+                    $pg = paginate_movies($all_movies, $test_page);
+                    
+                    $msg .= "📄 <b>Page $test_page:</b> " . count($pg['slice']) . " movies\n";
+                    $msg .= "🔢 <b>Total Pages:</b> {$pg['total_pages']}\n\n";
+                    
+                    $msg .= "🎬 <b>First 3 movies on page $test_page:</b>\n";
+                    for ($i = 0; $i < min(3, count($pg['slice'])); $i++) {
+                        $msg .= ($i + 1) . ". " . $pg['slice'][$i]['name'] . "\n";
+                    }
+                }
+                
+                sendMessage($chat_id, $msg, null, 'HTML');
+            }
+            elseif ($command == '/testautocorrect') {
+                $test_queries = [
+                    'kfg' => 'kgf',
+                    'avangers' => 'avengers',
+                    'pushpa 1' => 'pushpa',
+                    'spider man' => 'spider-man'
+                ];
+                
+                $msg = "🤖 <b>Auto-Correct Test</b>\n\n";
+                foreach ($test_queries as $typo => $expected) {
+                    $corrected = auto_correct_suggestion($typo);
+                    $msg .= "<b>$typo</b> → <code>" . ($corrected ?: 'No correction') . "</code>\n";
+                }
+                
+                sendMessage($chat_id, $msg, null, 'HTML');
+            }
+            elseif ($command == '/testrelated') {
+                $test_movies = ['kgf', 'avengers', 'pushpa', 'jawan'];
+                
+                $msg = "🎬 <b>Related Movies Test</b>\n\n";
+                foreach ($test_movies as $movie) {
+                    $related = get_related_movies($movie);
+                    $msg .= "<b>$movie</b> → " . implode(', ', array_slice($related, 0, 3)) . "\n\n";
+                }
+                
+                sendMessage($chat_id, $msg, null, 'HTML');
+            }
             else {
                 $msg = "❌ <b>Unknown Command</b>\n\n";
                 $msg .= "🔍 <b>Available Commands:</b>\n";
@@ -1311,36 +1834,60 @@ if ($update) {
         $message = $query['message'];
         $chat_id = $message['chat']['id'];
         $message_id = $message['message_id'];
+        $callback_query_id = $query['id'];
         
-        answerCallbackQuery($query['id'], "Processing...");
+        error_log("DEBUG: Callback query received - Data: $data, Chat: $chat_id, Message: $message_id");
+        
+        // Acknowledge callback immediately
+        answerCallbackQuery($callback_query_id, "Processing...");
         
         // Handle pagination
-        if (strpos($data, 'tu_prev_') === 0) {
-            $page = (int) str_replace('tu_prev_', '', $data);
+        if (strpos($data, 'tu_prev_') === 0 || strpos($data, 'tu_next_') === 0) {
+            $page = (int) str_replace(['tu_prev_', 'tu_next_'], '', $data);
             totalupload_controller($chat_id, $page);
-        }
-        elseif (strpos($data, 'tu_next_') === 0) {
-            $page = (int) str_replace('tu_next_', '', $data);
-            totalupload_controller($chat_id, $page);
+            
+            // Delete old message
+            deleteMessage($chat_id, $message_id);
         }
         elseif (strpos($data, 'tu_view_') === 0) {
             $page = (int) str_replace('tu_view_', '', $data);
+            
+            // Send "Processing" message
+            $processing_msg = sendMessage($chat_id, "⏳ <b>Sending page $page movies...</b>", null, 'HTML');
+            
             $all_movies = get_all_movies_list();
             $pg = paginate_movies($all_movies, $page);
             
-            // Send current page movies
-            forward_page_movies($chat_id, $pg['slice']);
-            
-            // Update message
-            $msg = "✅ <b>Sent page $page</b>\n\n";
-            $msg .= "🎬 <b>Movies sent:</b> " . count($pg['slice']) . "\n";
-            $msg .= "📄 <b>Page:</b> $page/{$pg['total_pages']}\n\n";
-            $msg .= "📢 Join: @EntertainmentTadka786";
-            
-            editMessage($chat_id, $message, $msg, null, 'HTML');
+            if (!empty($pg['slice'])) {
+                // Forward movies
+                $forwarded = forward_page_movies($chat_id, $pg['slice']);
+                
+                // Update processing message
+                $msg = "✅ <b>Sent page $page</b>\n\n";
+                $msg .= "🎬 <b>Movies sent:</b> $forwarded\n";
+                $msg .= "📄 <b>Page:</b> $page/{$pg['total_pages']}\n";
+                $msg .= "📊 <b>Total:</b> {$pg['total']} movies\n\n";
+                $msg .= "📢 Join: @EntertainmentTadka786";
+                
+                if (isset($processing_msg['result']['message_id'])) {
+                    editMessage($chat_id, $processing_msg, $msg, null, 'HTML');
+                }
+            } else {
+                $error_msg = "❌ <b>No movies found on page $page</b>\n\n";
+                $error_msg .= "Please try another page.";
+                
+                if (isset($processing_msg['result']['message_id'])) {
+                    editMessage($chat_id, $processing_msg, $error_msg, null, 'HTML');
+                }
+            }
         }
         elseif ($data === 'tu_stop') {
             deleteMessage($chat_id, $message_id);
+            answerCallbackQuery($callback_query_id, "Closed!");
+        }
+        elseif ($data === 'current_page') {
+            // Just show current page - no action needed
+            answerCallbackQuery($callback_query_id, "Current page");
         }
         elseif (strpos($data, 'movie_') === 0) {
             $movie_name = str_replace('movie_', '', $data);
@@ -1373,44 +1920,32 @@ if ($update) {
     }
 }
 
-// ==================== PAGINATION CONTROLLER ====================
-function totalupload_controller($chat_id, $page = 1) {
-    $all = get_all_movies_list();
-    if (empty($all)) {
-        $msg = "📭 <b>No Movies Found!</b>\n\n";
-        $msg .= "🎬 Database is empty\n";
-        $msg .= "📢 Add movies to channels\n";
-        $msg .= "💬 Join: @EntertainmentTadka7860";
-        sendMessage($chat_id, $msg, null, 'HTML');
-        return;
+// ==================== HELPER FUNCTIONS ====================
+function is_movie_request($text) {
+    $text_lower = strtolower(trim($text));
+    
+    // Skip common non-movie messages
+    $skip_patterns = ['hi', 'hello', 'hey', 'thanks', 'thank', 'please', 'help', 'ok', 'yes', 'no'];
+    foreach ($skip_patterns as $pattern) {
+        if (strpos($text_lower, $pattern) === 0) {
+            return false;
+        }
     }
     
-    $pg = paginate_movies($all, (int)$page);
-    
-    // Forward current page movies
-    forward_page_movies($chat_id, $pg['slice']);
-    
-    // Better formatted message
-    $title = "🎬 <b>Total Uploads</b>\n\n";
-    $title .= "📊 <b>Statistics:</b>\n";
-    $title .= "• Total Movies: <b>{$pg['total']}</b>\n";
-    $title .= "• Current Page: <b>{$pg['page']}/{$pg['total_pages']}</b>\n";
-    $title .= "• Showing: <b>" . count($pg['slice']) . " movies</b>\n\n";
-    
-    // Current page movies list
-    $title .= "📋 <b>Current Page Movies:</b>\n";
-    $i = 1;
-    foreach ($pg['slice'] as $movie) {
-        $movie_name = htmlspecialchars($movie['name'] ?? 'Unknown');
-        $title .= "$i. {$movie_name}\n";
-        $i++;
+    // Movie indicators
+    $movie_indicators = ['movie', 'film', 'download', 'watch', 'hd', '720p', '1080p'];
+    foreach ($movie_indicators as $indicator) {
+        if (strpos($text_lower, $indicator) !== false) {
+            return true;
+        }
     }
     
-    $title .= "\n📍 <b>Navigation:</b> Use buttons below";
-    $title .= "\n📢 <b>Join:</b> @EntertainmentTadka786";
+    // Check if it looks like a movie name
+    if (strlen($text) >= 3 && preg_match('/^[a-zA-Z0-9\s\-\.\,\(\)\&\'\"]+$/', $text)) {
+        return true;
+    }
     
-    $kb = build_totalupload_keyboard($pg['page'], $pg['total_pages']);
-    sendMessage($chat_id, $title, $kb, 'HTML');
+    return false;
 }
 
 // ==================== WEBHOOK SETUP ====================
