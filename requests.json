@@ -1,0 +1,95 @@
+{
+  "requests": [
+    {
+      "id": "REQ_1738573200_1080317415",
+      "movie_name": "KGF Chapter 3",
+      "user_id": "1080317415",
+      "user_name": "Owner",
+      "status": "pending",
+      "requested_at": "2025-02-03 14:30:00",
+      "updated_at": "2025-02-03 14:30:00",
+      "notes": "",
+      "completed_at": null,
+      "completed_by": null
+    },
+    {
+      "id": "REQ_1738573260_123456789",
+      "movie_name": "Pushpa 2 The Rule Hindi",
+      "user_id": "123456789",
+      "user_name": "Test User",
+      "status": "pending",
+      "requested_at": "2025-02-03 14:31:00",
+      "updated_at": "2025-02-03 14:31:00",
+      "notes": "Hindi dubbed version",
+      "completed_at": null,
+      "completed_by": null
+    },
+    {
+      "id": "REQ_1738573320_987654321",
+      "movie_name": "Avengers 5",
+      "user_id": "987654321",
+      "user_name": "Movie Lover",
+      "status": "completed",
+      "requested_at": "2025-02-02 10:15:00",
+      "updated_at": "2025-02-03 09:30:00",
+      "notes": "Added to main channel",
+      "completed_at": "2025-02-03 09:30:00",
+      "completed_by": "admin"
+    },
+    {
+      "id": "REQ_1738573380_555666777",
+      "movie_name": "Spiderman No Way Home 4K",
+      "user_id": "555666777",
+      "user_name": "Amit",
+      "status": "approved",
+      "requested_at": "2025-02-01 16:45:00",
+      "updated_at": "2025-02-02 11:20:00",
+      "notes": "Will add soon",
+      "completed_at": null,
+      "completed_by": null
+    },
+    {
+      "id": "REQ_1738573440_444333222",
+      "movie_name": "Invalid Movie Request Test",
+      "user_id": "444333222",
+      "user_name": "Neha",
+      "status": "rejected",
+      "requested_at": "2025-01-31 12:10:00",
+      "updated_at": "2025-02-01 10:05:00",
+      "notes": "Not a valid movie name",
+      "completed_at": "2025-02-01 10:05:00",
+      "completed_by": "admin"
+    }
+  ],
+  "total_requests": 5,
+  "pending": 2,
+  "approved": 1,
+  "completed": 1,
+  "rejected": 1,
+  "last_updated": "2025-02-03 14:30:00",
+  "statistics": {
+    "daily_requests": 2,
+    "weekly_requests": 5,
+    "monthly_requests": 25,
+    "most_requested_movie": "KGF Chapter 3",
+    "top_requesters": [
+      {
+        "user_id": "1080317415",
+        "user_name": "Owner",
+        "total_requests": 15
+      },
+      {
+        "user_id": "123456789",
+        "user_name": "Test User",
+        "total_requests": 8
+      },
+      {
+        "user_id": "987654321",
+        "user_name": "Movie Lover",
+        "total_requests": 5
+      }
+    ],
+    "completion_rate": "40%",
+    "average_completion_time": "2 days"
+  }
+}
