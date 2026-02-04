@@ -1,10 +1,19 @@
 <?php
-// Enable error reporting
+// ============================================
+// 🎬 ENTERTAINMENT TADKA BOT - LATEST VERSION
+// ============================================
+// Developer: Entertainment Tadka Team
+// Contact: @EntertainmentTadka7860
+// ============================================
+
+// ERROR SHOW KARO - DEBUGGING KE LIYE
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// ==================== ENVIRONMENT CONFIG LOADER ====================
+// ============================================
+// 🚀 ENVIRONMENT CONFIG LOADER
+// ============================================
 function loadEnv($filePath = '.env') {
     if (!file_exists($filePath)) {
         return false;
@@ -28,49 +37,60 @@ function loadEnv($filePath = '.env') {
     return true;
 }
 
-// Load environment
+// Environment load karo
 loadEnv();
 
-// ==================== CONFIG FROM ENVIRONMENT ====================
-// Telegram Bot Configuration
+// ============================================
+// ⚙️ CONFIGURATION SETTINGS
+// ============================================
+
+// 🤖 TELEGRAM BOT CONFIG
 define('BOT_TOKEN', $_ENV['BOT_TOKEN'] ?? '');
 define('BOT_USERNAME', $_ENV['BOT_USERNAME'] ?? '@EntertainmentTadkaBot');
 define('OWNER_ID', (int) ($_ENV['OWNER_ID'] ?? '1080317415'));
 
-// Channels Configuration
+// 📢 CHANNELS CONFIG
 define('MAIN_CHANNEL_ID', $_ENV['MAIN_CHANNEL_ID'] ?? '-1003181705395');
 define('THEATER_CHANNEL_ID', $_ENV['THEATER_CHANNEL_ID'] ?? '-1002831605258');
 define('BACKUP_CHANNEL_ID', $_ENV['BACKUP_CHANNEL_ID'] ?? '-1002964109368');
 define('REQUEST_GROUP_ID', $_ENV['REQUEST_GROUP_ID'] ?? '-1003083386043');
 
-// Private Channels
+// 🔒 PRIVATE CHANNELS (Optional)
 define('PRIVATE_CHANNEL_1', $_ENV['PRIVATE_CHANNEL_1'] ?? '-1003251791991');
 define('PRIVATE_CHANNEL_2', $_ENV['PRIVATE_CHANNEL_2'] ?? '-1002337293281');
 define('PRIVATE_CHANNEL_3', $_ENV['PRIVATE_CHANNEL_3'] ?? '-1003614546520');
 
-// Bot Settings
+// 📁 FILE CONFIG
 define('CSV_FILE', $_ENV['CSV_FILE'] ?? 'movies.csv');
-define('CSV_FORMAT', 'movie_name,message_id,channel_id');
+define('CSV_FORMAT', 'movie_name,message_id,channel_id'); // FORMAT LOCKED - CHANGE MAT KARNA!
 define('USERS_FILE', $_ENV['USERS_FILE'] ?? 'users.json');
 define('REQUESTS_FILE', $_ENV['REQUESTS_FILE'] ?? 'requests.json');
 define('STATS_FILE', $_ENV['STATS_FILE'] ?? 'bot_stats.json');
 define('BACKUP_DIR', $_ENV['BACKUP_DIR'] ?? 'backups/');
-define('CACHE_EXPIRY', (int) ($_ENV['CACHE_EXPIRY'] ?? '300'));
+
+// ⚡ PERFORMANCE SETTINGS
+define('CACHE_EXPIRY', (int) ($_ENV['CACHE_EXPIRY'] ?? '300')); // 5 minutes
 define('ITEMS_PER_PAGE', (int) ($_ENV['ITEMS_PER_PAGE'] ?? '5'));
+define('MAX_SEARCH_RESULTS', (int) ($_ENV['MAX_SEARCH_RESULTS'] ?? '10'));
+
+// ✅ FEATURE TOGGLES
 define('ENABLE_TYPING_INDICATOR', filter_var($_ENV['ENABLE_TYPING_INDICATOR'] ?? 'true', FILTER_VALIDATE_BOOLEAN));
 define('ENABLE_PUBLIC_CHANNELS', filter_var($_ENV['ENABLE_PUBLIC_CHANNELS'] ?? 'true', FILTER_VALIDATE_BOOLEAN));
 define('ENABLE_PRIVATE_CHANNELS', filter_var($_ENV['ENABLE_PRIVATE_CHANNELS'] ?? 'false', FILTER_VALIDATE_BOOLEAN));
+define('ENABLE_SMART_SUGGESTIONS', filter_var($_ENV['ENABLE_SMART_SUGGESTIONS'] ?? 'true', FILTER_VALIDATE_BOOLEAN));
 define('LOG_FORWARDS', filter_var($_ENV['LOG_FORWARDS'] ?? 'true', FILTER_VALIDATE_BOOLEAN));
 define('HIDE_PRIVATE_CHANNELS', filter_var($_ENV['HIDE_PRIVATE_CHANNELS'] ?? 'true', FILTER_VALIDATE_BOOLEAN));
 
-// Maintenance
+// 🛠️ MAINTENANCE MODE
 $MAINTENANCE_MODE = filter_var($_ENV['MAINTENANCE_MODE'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
-// ==================== CHANNELS CONFIGURATION ====================
+// ============================================
+// 📢 CHANNELS CONFIGURATION
+// ============================================
 $PUBLIC_CHANNELS = [];
 $PRIVATE_CHANNELS = [];
 
-// Only add public channels if enabled
+// Sirf public channels add karo agar enable hai
 if (ENABLE_PUBLIC_CHANNELS) {
     $PUBLIC_CHANNELS = [
         [
@@ -94,7 +114,7 @@ if (ENABLE_PUBLIC_CHANNELS) {
     ];
 }
 
-// Only add private channels if enabled (OFF by default)
+// Sirf private channels add karo agar enable hai (OFF by default)
 if (ENABLE_PRIVATE_CHANNELS) {
     $PRIVATE_CHANNELS = [
         [
@@ -118,23 +138,27 @@ if (ENABLE_PRIVATE_CHANNELS) {
     ];
 }
 
-// All active channels
+// Sabhi active channels
 $ALL_CHANNELS = array_merge($PUBLIC_CHANNELS, $PRIVATE_CHANNELS);
 $ACTIVE_CHANNELS = array_filter($ALL_CHANNELS, function($ch) {
     return $ch['active'] === true;
 });
 
-// ==================== GROUP CONFIGURATION ====================
+// ============================================
+// 👥 GROUP CONFIGURATION
+// ============================================
 $GROUPS_CONFIG = [
     [
         'id' => REQUEST_GROUP_ID,
         'name' => '@EntertainmentTadka7860',
-        'type' => 'request_only',  // Only handle /request commands
-        'allow_searches' => false  // Don't search movies here
+        'type' => 'request_only',  // Sirf /request commands handle karega
+        'allow_searches' => false  // Yahan movies search nahi honge
     ]
 ];
 
-// ==================== TYPING INDICATOR ====================
+// ============================================
+// 💬 TYPING INDICATOR
+// ============================================
 function sendTypingAction($chat_id) {
     if (!ENABLE_TYPING_INDICATOR) {
         return;
@@ -148,7 +172,9 @@ function sendTypingAction($chat_id) {
     return $result;
 }
 
-// ==================== TELEGRAM API FUNCTIONS ====================
+// ============================================
+// 📡 TELEGRAM API FUNCTIONS
+// ============================================
 function apiRequest($method, $params = array(), $is_multipart = false) {
     $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/" . $method;
     
@@ -217,15 +243,15 @@ function answerCallbackQuery($callback_query_id, $text = null) {
     apiRequest('answerCallbackQuery', $data);
 }
 
-function editMessage($chat_id, $message_obj, $new_text, $reply_markup = null) {
+function editMessage($chat_id, $message_obj, $new_text, $reply_markup = null, $parse_mode = 'HTML') {
     if (is_array($message_obj) && isset($message_obj['message_id'])) {
         $data = [
             'chat_id' => $chat_id,
             'message_id' => $message_obj['message_id'],
             'text' => $new_text,
-            'parse_mode' => 'HTML',
             'disable_web_page_preview' => true
         ];
+        if ($parse_mode) $data['parse_mode'] = $parse_mode;
         if ($reply_markup) $data['reply_markup'] = json_encode($reply_markup);
         $result = apiRequest('editMessageText', $data);
         return json_decode($result, true);
@@ -241,7 +267,9 @@ function deleteMessage($chat_id, $message_id) {
     return json_decode($result, true);
 }
 
-// ==================== CSV FUNCTIONS (LOCKED FORMAT) ====================
+// ============================================
+// 📁 CSV FUNCTIONS (FORMAT LOCKED: movie_name,message_id,channel_id)
+// ============================================
 function init_csv_file() {
     if (!file_exists(CSV_FILE)) {
         $header = explode(',', CSV_FORMAT);
@@ -254,7 +282,7 @@ function init_csv_file() {
     return false;
 }
 
-// Initialize CSV
+// CSV initialize karo
 init_csv_file();
 
 function load_and_clean_csv($filename = CSV_FILE) {
@@ -285,7 +313,7 @@ function load_and_clean_csv($filename = CSV_FILE) {
                     
                     $data[] = $entry;
                     
-                    // Index by movie name
+                    // Movie name se index karo
                     $movie_key = strtolower($movie_name);
                     if (!isset($movie_messages[$movie_key])) {
                         $movie_messages[$movie_key] = [];
@@ -316,7 +344,7 @@ function load_movies_from_csv() {
     return get_cached_movies();
 }
 
-function append_movie($movie_name, $message_id, $channel_id = null) {
+function append_movie_safe($movie_name, $message_id, $channel_id = null) {
     if (empty(trim($movie_name))) {
         return false;
     }
@@ -325,12 +353,16 @@ function append_movie($movie_name, $message_id, $channel_id = null) {
         $channel_id = MAIN_CHANNEL_ID;
     }
     
-    $entry = [$movie_name, $message_id, $channel_id];
-    $handle = fopen(CSV_FILE, "a");
-    fputcsv($handle, $entry);
-    fclose($handle);
+    // FILE LOCKING use karo race condition se bachne ke liye
+    $fp = fopen(CSV_FILE, 'a');
+    if (flock($fp, LOCK_EX)) {
+        $entry = [$movie_name, $message_id, $channel_id];
+        fputcsv($fp, $entry);
+        flock($fp, LOCK_UN);
+    }
+    fclose($fp);
     
-    // Update cache
+    // Cache update karo
     global $movie_messages, $movie_cache;
     $movie_key = strtolower(trim($movie_name));
     $item = [
@@ -349,7 +381,9 @@ function append_movie($movie_name, $message_id, $channel_id = null) {
     return true;
 }
 
-// ==================== REQUEST SYSTEM FUNCTIONS ====================
+// ============================================
+// 📝 REQUEST SYSTEM FUNCTIONS
+// ============================================
 function init_requests_file() {
     if (!file_exists(REQUESTS_FILE)) {
         $initial_data = [
@@ -410,7 +444,7 @@ function get_user_requests($user_id) {
         }
     }
     
-    // Sort by date (newest first)
+    // Date ke hisaab se sort karo (newest first)
     usort($user_requests, function($a, $b) {
         return strtotime($b['requested_at']) <=> strtotime($a['requested_at']);
     });
@@ -446,10 +480,12 @@ function get_all_requests_stats() {
     ];
 }
 
-// Initialize requests file
+// Requests file initialize karo
 init_requests_file();
 
-// ==================== HELPER FUNCTIONS ====================
+// ============================================
+// 🛠️ HELPER FUNCTIONS
+// ============================================
 function is_private_channel_id($channel_id) {
     $private_channels = [
         PRIVATE_CHANNEL_1,
@@ -462,10 +498,10 @@ function is_private_channel_id($channel_id) {
 
 function get_channel_display_name($channel_id) {
     if (HIDE_PRIVATE_CHANNELS && is_private_channel_id($channel_id)) {
-        return '@EntertainmentTadka786'; // Hide private channel name
+        return '@EntertainmentTadka786'; // Private channel ka naam hide karo
     }
     
-    // Map channel IDs to display names
+    // Channel IDs ko display names se map karo
     $channel_map = [
         MAIN_CHANNEL_ID => '@EntertainmentTadka786',
         THEATER_CHANNEL_ID => '@threater_print_movies',
@@ -490,53 +526,55 @@ function get_group_info($chat_id) {
     return null;
 }
 
-// ==================== FORWARDING FUNCTIONS ====================
+// ============================================
+// 📤 FORWARDING FUNCTIONS
+// ============================================
 function deliver_item_to_chat($chat_id, $item) {
-    // Show typing indicator
+    // Typing indicator show karo
     sendTypingAction($chat_id);
     
     if (!empty($item['message_id']) && is_numeric($item['message_id'])) {
         $channel_id = $item['channel_id'] ?? MAIN_CHANNEL_ID;
         $movie_name = $item['movie_name'] ?? 'Unknown';
         
-        // Check if it's a private channel
+        // Check karo agar private channel hai
         $is_private_channel = is_private_channel_id($channel_id);
         
-        // If private channel and we want to hide it, use main channel for forwarding
+        // Agar private channel hai aur hum hide karna chahte hain
         if ($is_private_channel && HIDE_PRIVATE_CHANNELS) {
-            // Forward from private channel secretly
+            // Private channel se secretly forward karo
             $actual_result = json_decode(forwardMessage($chat_id, $channel_id, $item['message_id']), true);
             
             if ($actual_result && isset($actual_result['ok']) && $actual_result['ok']) {
-                // Successfully forwarded from private channel
-                // User thinks it's from main channel
+                // Safely forwarded from private channel
+                // User ko lagega ki main channel se aaya hai
                 error_log("SECRET: Forwarded '$movie_name' from private channel $channel_id");
                 return true;
             } else {
-                // Private channel failed, try main channel
+                // Private channel fail hua, main channel try karo
                 $channel_id = MAIN_CHANNEL_ID;
                 error_log("FALLBACK: Private channel failed, trying main channel");
             }
         }
         
-        // Check if channel is active
+        // Check karo agar channel active hai
         if (!is_channel_active($channel_id)) {
             $channel_id = find_active_channel($channel_id);
         }
         
-        // DEBUG: Check channel access
+        // DEBUG: Channel access check karo
         $channel_check = json_decode(apiRequest('getChat', ['chat_id' => $channel_id]), true);
         if (!$channel_check || !$channel_check['ok']) {
             error_log("ERROR: Cannot access channel $channel_id. Trying main channel...");
             $channel_id = MAIN_CHANNEL_ID;
         }
         
-        // Forward the message
+        // Message forward karo
         $result = json_decode(forwardMessage($chat_id, $channel_id, $item['message_id']), true);
         
         if ($result && isset($result['ok']) && $result['ok']) {
             if (LOG_FORWARDS) {
-                // Log actual channel for admin, but user won't see
+                // Admin ke liye actual channel log karo, lekin user ko nahi dikhega
                 log_forward($chat_id, $channel_id, $movie_name, true);
             }
             return true;
@@ -554,10 +592,10 @@ function deliver_item_to_chat($chat_id, $item) {
             } else {
                 error_log("CRITICAL: Both forward and copy failed for '$movie_name'");
                 
-                // Ultimate fallback - send channel links
+                // Ultimate fallback - channel links bhejo
                 $fallback_msg = "🎬 <b>" . htmlspecialchars($movie_name) . "</b>\n\n";
-                $fallback_msg .= "❌ <b>Could not forward from channel!</b>\n\n";
-                $fallback_msg .= "📢 <b>Join our channels to access:</b>\n";
+                $fallback_msg .= "❌ <b>Channel se forward nahi kar paye!</b>\n\n";
+                $fallback_msg .= "📢 <b>Channels join karo:</b>\n";
                 $fallback_msg .= "🍿 Main: @EntertainmentTadka786\n";
                 $fallback_msg .= "🎭 Theater: @threater_print_movies\n";
                 $fallback_msg .= "🔒 Backup: @ETBackup";
@@ -570,7 +608,7 @@ function deliver_item_to_chat($chat_id, $item) {
     
     // Fallback text message
     $text = "🎬 " . ($item['movie_name'] ?? 'Unknown') . "\n";
-    $text .= "📢 Join our channels:\n";
+    $text .= "📢 Hamare channels join karo:\n";
     $text .= "🍿 Main: @EntertainmentTadka786\n";
     $text .= "🎭 Theater: @threater_print_movies\n";
     $text .= "🔒 Backup: @ETBackup\n";
@@ -594,21 +632,21 @@ function is_channel_active($channel_id) {
 function find_active_channel($original_channel_id) {
     global $ACTIVE_CHANNELS;
     
-    // Try main channel first
+    // Pehle main channel try karo
     foreach ($ACTIVE_CHANNELS as $channel) {
         if ($channel['id'] == MAIN_CHANNEL_ID) {
             return MAIN_CHANNEL_ID;
         }
     }
     
-    // Try any active channel
+    // Koi bhi active channel try karo
     foreach ($ACTIVE_CHANNELS as $channel) {
         if ($channel['id'] != $original_channel_id) {
             return $channel['id'];
         }
     }
     
-    // Default to main channel
+    // Default main channel
     return MAIN_CHANNEL_ID;
 }
 
@@ -623,70 +661,253 @@ function log_forward($user_id, $channel_id, $movie_name, $success) {
     file_put_contents($log_file, $log_entry, FILE_APPEND);
 }
 
-// ==================== SEARCH FUNCTIONS ====================
-function smart_search($query) {
-    global $movie_messages;
-    $query_lower = strtolower(trim($query));
-    $results = array();
+// ============================================
+// 🔍 SMART SEARCH + SMART SUGGESTIONS SYSTEM
+// ============================================
+
+function normalize_movie_name($name) {
+    $name = strtolower($name);
+    $name = preg_replace('/\([^)]*\)/', '', $name); // Year hatao
+    $name = preg_replace('/[^a-z0-9 ]/', ' ', $name);
+    $name = preg_replace('/\s+/', ' ', $name);
+    return trim($name);
+}
+
+function get_channel_type_by_id($channel_id) {
+    global $PUBLIC_CHANNELS, $PRIVATE_CHANNELS;
     
-    if (empty($movie_messages)) {
-        get_cached_movies();
+    foreach ($PUBLIC_CHANNELS as $ch) {
+        if ($ch['id'] == $channel_id) return $ch['type'];
+    }
+    foreach ($PRIVATE_CHANNELS as $ch) {
+        if ($ch['id'] == $channel_id) return $ch['type'];
+    }
+    return 'unknown';
+}
+
+function smart_search_improved($query) {
+    global $movie_messages;
+    
+    $query_original = trim($query);
+    $query_lower = strtolower($query_original);
+    
+    // KEYWORDS EXTRACT KARO
+    $theater_keywords = ['theater', 'theatre', 'print', 'hdcam', 'camrip', 'hdrip', 'bluray'];
+    $language_keywords = ['hindi', 'english', 'tamil', 'telugu', 'malayalam', 'marathi'];
+    
+    $is_theater = false;
+    $language = '';
+    
+    // Theater check karo
+    foreach ($theater_keywords as $kw) {
+        if (strpos($query_lower, $kw) !== false) {
+            $is_theater = true;
+            $query_lower = str_replace($kw, '', $query_lower);
+        }
     }
     
-    foreach ($movie_messages as $movie => $entries) {
-        $score = 0;
-        
-        // Exact match
-        if ($movie == $query_lower) {
-            $score = 100;
+    // Language check karo
+    foreach ($language_keywords as $lang) {
+        if (strpos($query_lower, $lang) !== false) {
+            $language = $lang;
+            $query_lower = str_replace($lang, '', $query_lower);
         }
-        // Partial match
-        elseif (strpos($movie, $query_lower) !== false) {
-            $score = 80 - (strlen($movie) - strlen($query_lower));
-        }
-        // Similar text match
-        else {
-            similar_text($movie, $query_lower, $similarity);
-            if ($similarity > 60) {
-                $score = $similarity;
+    }
+    
+    // Query clean karo
+    $query_clean = normalize_movie_name($query_lower);
+    
+    if (empty($query_clean)) {
+        return [];
+    }
+    
+    $results = [];
+    
+    // DATABASE MEIN SEARCH KARO
+    foreach ($movie_messages as $movie_key => $entries) {
+        foreach ($entries as $item) {
+            $item_name = $item['movie_name'] ?? '';
+            $item_name_norm = normalize_movie_name($item_name);
+            
+            // Agar empty hai toh skip karo
+            if (empty($item_name_norm)) continue;
+            
+            // FILTERS APPLY KARO
+            if ($is_theater) {
+                // Channel type check karo
+                $channel_id = $item['channel_id'] ?? MAIN_CHANNEL_ID;
+                $channel_type = get_channel_type_by_id($channel_id);
+                if ($channel_type !== 'theater') continue;
+            }
+            
+            if (!empty($language)) {
+                $item_lower = strtolower($item_name);
+                if (strpos($item_lower, $language) === false) continue;
+            }
+            
+            // SCORING SYSTEM
+            $score = 0;
+            
+            // Exact match
+            if ($item_name_norm === $query_clean) {
+                $score = 100;
+            }
+            // Contains match
+            elseif (strpos($item_name_norm, $query_clean) !== false) {
+                $score = 85 - (strlen($item_name_norm) - strlen($query_clean));
+            }
+            // Similar text
+            else {
+                similar_text($item_name_norm, $query_clean, $percent);
+                if ($percent >= 60) {
+                    $score = $percent;
+                }
+            }
+            
+            if ($score > 0) {
+                $results[] = [
+                    'score' => $score,
+                    'item' => $item,
+                    'name' => $item_name,
+                    'channel_id' => $item['channel_id'] ?? MAIN_CHANNEL_ID
+                ];
             }
         }
-        
-        if ($score > 0) {
-            // Sort entries by message_id (newest first)
-            usort($entries, function($a, $b) {
-                return ($b['message_id'] ?? 0) <=> ($a['message_id'] ?? 0);
-            });
-            
-            $results[$movie] = [
-                'score' => $score,
-                'count' => count($entries),
-                'entries' => $entries
-            ];
-        }
     }
     
-    // Sort by score (highest first)
-    uasort($results, function($a, $b) {
+    // SORT KARO AUR RETURN KARO
+    usort($results, function($a, $b) {
         if ($b['score'] == $a['score']) {
-            return $b['count'] <=> $a['count']; // More entries first if score same
+            // Naye items pehle (message ID ke hisaab se)
+            return ($b['item']['message_id'] ?? 0) <=> ($a['item']['message_id'] ?? 0);
         }
         return $b['score'] <=> $a['score'];
     });
     
-    return $results;
+    return array_slice($results, 0, MAX_SEARCH_RESULTS);
 }
 
+function build_smart_suggestions($query) {
+    global $movie_messages;
+    
+    if (empty($movie_messages)) {
+        return [];
+    }
+    
+    $query_norm = normalize_movie_name($query);
+    $suggestions = [];
+    
+    // Unique movie names collect karo
+    $unique_movies = [];
+    foreach ($movie_messages as $movie_key => $entries) {
+        if (!empty($entries[0]['movie_name'])) {
+            $movie_name = $entries[0]['movie_name'];
+            $unique_movies[$movie_name] = $entries[0];
+        }
+    }
+    
+    // Har movie ko score karo
+    foreach ($unique_movies as $movie_name => $item) {
+        $movie_norm = normalize_movie_name($movie_name);
+        
+        if (empty($movie_norm) || empty($query_norm)) continue;
+        
+        // Quick filter: kam se kam ek word match hona chahiye
+        $query_words = explode(' ', $query_norm);
+        $movie_words = explode(' ', $movie_norm);
+        
+        $match_count = 0;
+        foreach ($query_words as $q_word) {
+            if (in_array($q_word, $movie_words)) {
+                $match_count++;
+            }
+        }
+        
+        if ($match_count > 0) {
+            similar_text($movie_norm, $query_norm, $percent);
+            if ($percent >= 40) { // Suggestions ke liye lower threshold
+                $suggestions[$movie_name] = [
+                    'score' => $percent + ($match_count * 10),
+                    'item' => $item,
+                    'match_count' => $match_count
+                ];
+            }
+        }
+    }
+    
+    // Score ke hisaab se sort karo
+    uasort($suggestions, function($a, $b) {
+        if ($b['score'] == $a['score']) {
+            return $b['match_count'] <=> $a['match_count'];
+        }
+        return $b['score'] <=> $a['score'];
+    });
+    
+    // Top 6 return karo
+    return array_slice(array_keys($suggestions), 0, 6);
+}
+
+function send_smart_suggestions($chat_id, $query, $search_results = []) {
+    $suggestions = build_smart_suggestions($query);
+    
+    if (empty($suggestions) && empty($search_results)) {
+        $msg = "🎬 <b>Movie Nahi Mili!</b>\n\n";
+        $msg .= "🔍 <b>Search Kiya:</b> <code>" . htmlspecialchars($query) . "</code>\n\n";
+        $msg .= "💡 <b>Suggestions:</b>\n";
+        $msg .= "1️⃣ Spelling check karo\n";
+        $msg .= "2️⃣ Short naam try karo\n";
+        $msg .= "3️⃣ Year hatao (2024, 2025)\n";
+        $msg .= "4️⃣ Language specify karo\n\n";
+        $msg .= "📢 <b>Example searches:</b>\n";
+        $msg .= "• <code>kgf</code>\n";
+        $msg .= "• <code>pushpa hindi</code>\n";
+        $msg .= "• <code>avengers english</code>\n\n";
+        $msg .= "📥 <b>Request karo:</b> @EntertainmentTadka7860";
+        
+        sendMessage($chat_id, $msg, null, 'HTML');
+        return;
+    }
+    
+    // Agar search mein kuch results mile hain lekin user ko aur chahiye
+    if (!empty($search_results) && count($suggestions) > 0) {
+        $msg = "🔍 <b>Related Movies Mili:</b>\n\n";
+        $msg .= "📝 <b>Aapne search kiya:</b> <code>" . htmlspecialchars($query) . "</code>\n\n";
+        $msg .= "👇 <b>Similar movies:</b>\n";
+        
+        $buttons = [];
+        foreach ($suggestions as $movie_name) {
+            $short_name = (strlen($movie_name) > 35) 
+                ? substr($movie_name, 0, 32) . '...' 
+                : $movie_name;
+            
+            $buttons[] = [
+                ['text' => "🎬 $short_name", 'callback_data' => 'suggest:' . urlencode($movie_name)]
+            ];
+        }
+        
+        // "Search Again" button add karo
+        $buttons[] = [
+            ['text' => '🔍 Dubara Search Karein', 'callback_data' => 'search_again'],
+            ['text' => '❌ Cancel', 'callback_data' => 'cancel_suggest']
+        ];
+        
+        sendMessage($chat_id, $msg, ['inline_keyboard' => $buttons], 'HTML');
+    }
+}
+
+// ============================================
+// 🔍 ADVANCED SEARCH FUNCTION
+// ============================================
 function advanced_search($chat_id, $query, $user_id = null) {
     global $movie_messages;
     
     sendTypingAction($chat_id);
     
-    $q = strtolower(trim($query));
+    $q = trim($query);
     
     // Minimum length check
     if (strlen($q) < 2) {
-        sendMessage($chat_id, "❌ Please enter at least 2 characters for search");
+        sendMessage($chat_id, "❌ Kam se kam 2 characters enter karein");
         return;
     }
     
@@ -698,7 +919,7 @@ function advanced_search($chat_id, $query, $user_id = null) {
         'subtitle', 'quality', 'hd', 'full', 'part', 'scene'
     ];
     
-    $query_words = explode(' ', $q);
+    $query_words = explode(' ', strtolower($q));
     $invalid_count = 0;
     foreach ($query_words as $word) {
         if (in_array($word, $invalid_keywords)) {
@@ -707,107 +928,76 @@ function advanced_search($chat_id, $query, $user_id = null) {
     }
     
     if ($invalid_count > 0 && ($invalid_count / count($query_words)) > 0.5) {
-        $help_msg = "🎬 Please enter a movie name!\n\n";
+        $help_msg = "🎬 Kripya movie ka naam enter karein!\n\n";
         $help_msg .= "🔍 Examples:\n";
         $help_msg .= "• kgf\n• pushpa\n• avengers\n• spider-man\n\n";
-        $help_msg .= "❌ Don't type technical queries\n\n";
+        $help_msg .= "❌ Technical queries mat likhein\n\n";
         $help_msg .= "📢 Join: @EntertainmentTadka786";
         sendMessage($chat_id, $help_msg, null, 'HTML');
         return;
     }
     
-    $found = smart_search($q);
+    // Smart search karo
+    $results = smart_search_improved($q);
     
-    if (!empty($found)) {
-        $total_movies = 0;
-        $forwarded_count = 0;
-        
-        // Count total movies
-        foreach ($found as $movie_data) {
-            $total_movies += $movie_data['count'];
-        }
-        
-        $first_movie = array_key_first($found);
-        $entries = $found[$first_movie]['entries'];
-        
-        // Show searching message with ALL public channels
-        $search_msg = "✅ <b>'" . htmlspecialchars($query) . "' ke $total_movies items ka info mil gaya!</b>\n\n";
-        
-        // Add ALL public channels
-        $search_msg .= "📢 <b>Join our channels:</b>\n";
-        $search_msg .= "🍿 Main: @EntertainmentTadka786\n";
-        $search_msg .= "🎭 Theater: @threater_print_movies\n";
-        $search_msg .= "🔒 Backup: @ETBackup\n\n";
-        $search_msg .= "⏳ <b>Forwarding...</b>";
+    if (!empty($results)) {
+        // Searching message show karo
+        $search_msg = "✅ <b>" . count($results) . " matches mil gaye!</b>\n\n";
+        $search_msg .= "🔍 <b>Search:</b> <code>" . htmlspecialchars($q) . "</code>\n";
+        $search_msg .= "📦 <b>Items forward ho rahe hain...</b>\n\n";
+        $search_msg .= "⏳ Please wait...";
         
         $search_message = sendMessage($chat_id, $search_msg, null, 'HTML');
         
-        // Forward ALL movies from first match
-        if (!empty($entries)) {
-            $i = 1;
-            foreach ($entries as $entry) {
-                // Forward each movie
-                deliver_item_to_chat($chat_id, $entry);
-                $forwarded_count++;
-                
-                // Small delay to avoid rate limits
-                usleep(300000); // 0.3 seconds
-                $i++;
+        // Items forward karo
+        $sent_count = 0;
+        foreach ($results as $result) {
+            if (deliver_item_to_chat($chat_id, $result['item'])) {
+                $sent_count++;
+                usleep(200000); // 0.2s delay
             }
         }
         
-        // Show summary with ALL channels
-        $summary_msg = "✅ <b>Search Complete!</b>\n\n";
-        $summary_msg .= "🔍 <b>Search:</b> " . htmlspecialchars($query) . "\n";
-        $summary_msg .= "🎬 <b>Matches found:</b> " . count($found) . "\n";
-        $summary_msg .= "📹 <b>Videos forwarded:</b> $forwarded_count\n\n";
+        // Summary show karo
+        $summary = "✅ <b>Search Complete!</b>\n\n";
+        $summary .= "🔍 <b>Search:</b> <code>" . htmlspecialchars($q) . "</code>\n";
+        $summary .= "📊 <b>Total matches:</b> " . count($results) . "\n";
+        $summary .= "📤 <b>Successfully sent:</b> $sent_count\n\n";
         
-        // Show match list
-        if (count($found) > 1) {
-            $summary_msg .= "📋 <b>All matches:</b>\n";
-            $match_num = 1;
-            foreach ($found as $movie_name => $data) {
-                $summary_msg .= "$match_num. $movie_name (" . $data['count'] . " videos)\n";
-                $match_num++;
-                if ($match_num > 5) {
-                    $summary_msg .= "... and " . (count($found) - 5) . " more\n";
-                    break;
+        // Smart suggestions show karo agar enable hai
+        if (ENABLE_SMART_SUGGESTIONS && count($results) > 0) {
+            $summary .= "💡 <b>Aur related movies chahiye?</b>\n";
+            $summary .= "Koi aur naam type karein ya ye try karein:\n";
+            
+            // Suggestions get karo
+            $suggestions = build_smart_suggestions($q);
+            if (!empty($suggestions)) {
+                foreach ($suggestions as $index => $suggestion) {
+                    if ($index < 3) { // Top 3 dikhao
+                        $summary .= ($index + 1) . ". <code>" . htmlspecialchars($suggestion) . "</code>\n";
+                    }
                 }
             }
-            $summary_msg .= "\n";
         }
         
-        // Add ALL public channels in summary too
-        $summary_msg .= "📢 <b>Join our channels:</b>\n";
-        $summary_msg .= "🍿 Main: @EntertainmentTadka786\n";
-        $summary_msg .= "🎭 Theater: @threater_print_movies\n";
-        $summary_msg .= "🔒 Backup: @ETBackup\n";
-        $summary_msg .= "📥 Requests: @EntertainmentTadka7860";
+        $summary .= "\n📢 <b>Join:</b> @EntertainmentTadka786";
         
-        // Edit the original search message
-        editMessage($chat_id, $search_message, $summary_msg, null, 'HTML');
+        editMessage($chat_id, $search_message, $summary, null, 'HTML');
         
     } else {
-        $msg = "😔 <b>Movie Not Found!</b>\n\n";
-        $msg .= "🎬 <b>Requested:</b> " . htmlspecialchars($query) . "\n\n";
-        $msg .= "📝 <b>Request it here:</b>\n";
-        $msg .= "@EntertainmentTadka7860\n\n";
-        $msg .= "🔔 <b>I'll notify you when it's added!</b>\n\n";
-        $msg .= "📢 <b>Join our channels:</b>\n";
-        $msg .= "🍿 Main: @EntertainmentTadka786\n";
-        $msg .= "🎭 Theater: @threater_print_movies\n";
-        $msg .= "🔒 Backup: @ETBackup";
-        
-        sendMessage($chat_id, $msg, null, 'HTML');
+        // Koi result nahi mila - suggestions show karo
+        send_smart_suggestions($chat_id, $q);
     }
 }
 
-// ==================== REQUEST GROUP HANDLER ====================
+// ============================================
+// 📝 REQUEST GROUP HANDLER
+// ============================================
 function handle_request_group($message) {
     $chat_id = $message['chat']['id'];
     $text = $message['text'] ?? '';
     
-    // ONLY handle REQUEST GROUP messages that START with "/request" command
+    // SIRF REQUEST GROUP ke messages handle karo jo "/request" se start hote hain
     if ($chat_id == REQUEST_GROUP_ID && !empty($text) && strpos($text, '/request') === 0) {
         sendTypingAction($chat_id);
         
@@ -815,10 +1005,10 @@ function handle_request_group($message) {
         $movie_name = isset($parts[1]) ? implode(' ', array_slice($parts, 1)) : '';
         
         if (empty($movie_name)) {
-            $reply = "📝 <b>How to use /request:</b>\n\n";
+            $reply = "📝 <b>/request kaise use karein:</b>\n\n";
             $reply .= "Usage: <code>/request Movie Name</code>\n\n";
             $reply .= "Example: <code>/request KGF 3 hindi movie</code>\n\n";
-            $reply .= "📢 We'll add it soon!\n";
+            $reply .= "📢 Hum jaldi add kar denge!\n";
             $reply .= "🔍 Check: @EntertainmentTadka786";
             
             sendMessage($chat_id, $reply, null, 'HTML');
@@ -828,25 +1018,25 @@ function handle_request_group($message) {
         $user_name = $message['from']['first_name'] ?? 'User';
         $user_id = $message['from']['id'] ?? 0;
         
-        // Save to database
+        // Database mein save karo
         $request_id = save_movie_request($user_id, $user_name, $movie_name);
         
-        $reply = "✅ <b>Request Received!</b>\n\n";
+        $reply = "✅ <b>Request Receive Ho Gayi!</b>\n\n";
         $reply .= "🎬 <b>Movie:</b> " . htmlspecialchars($movie_name) . "\n";
         $reply .= "👤 <b>By:</b> $user_name\n";
         $reply .= "⏰ <b>Time:</b> " . date('H:i:s') . "\n\n";
-        $reply .= "We'll add it soon!\n";
+        $reply .= "Hum jaldi add kar denge!\n";
         $reply .= "Check: @EntertainmentTadka786";
         
         sendMessage($chat_id, $reply, null, 'HTML');
         
-        // Log request
+        // Request log karo
         $log = date('Y-m-d H:i:s') . " | User: $user_id ($user_name) | Request: $movie_name | ID: $request_id\n";
         file_put_contents('request_logs.txt', $log, FILE_APPEND);
         
-        // Notify owner
+        // Owner ko notify karo
         if (OWNER_ID) {
-            $admin_msg = "📥 <b>New Movie Request</b>\n\n";
+            $admin_msg = "📥 <b>Nayi Movie Request</b>\n\n";
             $admin_msg .= "🎬 <b>Movie:</b> " . htmlspecialchars($movie_name) . "\n";
             $admin_msg .= "📋 <b>Request ID:</b> $request_id\n";
             $admin_msg .= "👤 <b>User:</b> $user_name\n";
@@ -861,11 +1051,13 @@ function handle_request_group($message) {
         return true;
     }
     
-    // For ALL OTHER messages in request group (including movie names), DON'T handle them
+    // REQUEST GROUP ke sabhi dusre messages (including movie names) ko handle MAT karo
     return false;
 }
 
-// ==================== PAGINATION FUNCTIONS ====================
+// ============================================
+// 📄 PAGINATION FUNCTIONS
+// ============================================
 function get_all_movies_list() {
     $movies = load_movies_from_csv();
     $list = [];
@@ -878,7 +1070,7 @@ function get_all_movies_list() {
         ];
     }
     
-    // Sort by name
+    // Name ke hisaab se sort karo
     usort($list, function($a, $b) {
         return strcasecmp($a['name'], $b['name']);
     });
@@ -891,7 +1083,7 @@ function paginate_movies($all_movies, $page = 1) {
     $total = count($all_movies);
     $total_pages = ceil($total / $per_page);
     
-    // Validate page number
+    // Page number validate karo
     if ($page < 1) $page = 1;
     if ($page > $total_pages) $page = $total_pages;
     
@@ -928,7 +1120,7 @@ function build_totalupload_keyboard($current_page, $total_pages) {
     
     $keyboard[] = $row;
     
-    // View current page button
+    // Current page ka button
     $keyboard[] = [
         ['text' => '📤 Send This Page', 'callback_data' => 'tu_view_' . $current_page],
         ['text' => '❌ Stop', 'callback_data' => 'tu_stop']
@@ -948,19 +1140,22 @@ function forward_page_movies($chat_id, $movies) {
     }
 }
 
-// ==================== DATE STATISTICS ====================
+// ============================================
+// 📊 DATE STATISTICS
+// ============================================
 function get_movies_by_date() {
     $movies = load_movies_from_csv();
     $date_counts = [];
     
-    // Since CSV doesn't store dates, we'll use a placeholder
-    // In real implementation, you'd need to store dates in CSV
+    // CSV mein dates nahi hain, isliye placeholder use karo
     $date_counts['Unknown'] = count($movies);
     
     return $date_counts;
 }
 
-// ==================== FILE INITIALIZATION ====================
+// ============================================
+// 📁 FILE INITIALIZATION
+// ============================================
 if (!file_exists(USERS_FILE)) {
     file_put_contents(USERS_FILE, json_encode(['users' => [], 'total_requests' => 0]));
     @chmod(USERS_FILE, 0666);
@@ -984,20 +1179,22 @@ if (!file_exists(BACKUP_DIR)) {
 $movie_messages = array();
 $movie_cache = array();
 
-// ==================== MAIN UPDATE PROCESSING ====================
+// ============================================
+// 🚀 MAIN UPDATE PROCESSING
+// ============================================
 $update = json_decode(file_get_contents('php://input'), true);
 
 if ($update) {
-    // Initialize CSV cache
+    // CSV cache initialize karo
     get_cached_movies();
     
     // Maintenance mode check
     if ($MAINTENANCE_MODE && isset($update['message'])) {
         $chat_id = $update['message']['chat']['id'];
-        $msg = "🛠️ <b>Bot Under Maintenance</b>\n\n";
-        $msg .= "We're temporarily unavailable.\n";
-        $msg .= "Will be back soon!\n\n";
-        $msg .= "Thanks for patience 🙏";
+        $msg = "🛠️ <b>Bot Maintenance Mode</b>\n\n";
+        $msg .= "Hum temporarily unavailable hain.\n";
+        $msg .= "Jaldi wapas aa jayenge!\n\n";
+        $msg .= "Shukriya patience ke liye 🙏";
         sendMessage($chat_id, $msg, null, 'HTML');
         exit;
     }
@@ -1008,7 +1205,7 @@ if ($update) {
         $message_id = $message['message_id'];
         $chat_id = $message['chat']['id'];
         
-        // Check if from any active channel
+        // Check karo agar kisi active channel se hai
         foreach ($ACTIVE_CHANNELS as $channel) {
             if ($channel['id'] == $chat_id) {
                 $text = '';
@@ -1023,7 +1220,7 @@ if ($update) {
                 }
                 
                 if (!empty(trim($text))) {
-                    append_movie($text, $message_id, $chat_id);
+                    append_movie_safe($text, $message_id, $chat_id);
                     
                     // Log the save
                     error_log("✅ Movie saved: '$text' from channel: " . $channel['name'] . " ($chat_id)");
@@ -1041,35 +1238,35 @@ if ($update) {
         $user_id = $message['from']['id'] ?? 0;
         $user_name = $message['from']['first_name'] ?? 'User';
         
-        // Show typing indicator
+        // Typing indicator show karo
         sendTypingAction($chat_id);
         
-        // Check group type
+        // Group type check karo
         $group_info = get_group_info($chat_id);
         
         if ($group_info) {
-            // It's a configured group
+            // Yeh configured group hai
             if ($group_info['type'] == 'request_only') {
-                // Request group - only handle /request commands
+                // Request group - sirf /request commands handle karo
                 if (strpos($text, '/request') === 0) {
                     handle_request_group($message);
                     exit;
                 } else {
-                    // For ALL other messages in request group (including movie names)
-                    // Process as NORMAL SEARCH
+                    // REQUEST GROUP ke sabhi dusre messages (including movie names) ko
+                    // NORMAL SEARCH ki tarah process karo
                     if (!empty(trim($text)) && strpos($text, '/') !== 0) {
-                        // This is where movie names in request group will be processed
+                        // Yahan request group ke movie names process honge
                         advanced_search($chat_id, $text, $user_id);
                         exit;
                     }
-                    // Ignore other messages
+                    // Dusre messages ignore karo
                     exit;
                 }
             }
         }
         
         // Default processing for private chats and unconfigured groups
-        // Update user stats
+        // User stats update karo
         $users_data = json_decode(file_get_contents(USERS_FILE), true);
         if (!isset($users_data['users'][$user_id])) {
             $users_data['users'][$user_id] = [
@@ -1085,17 +1282,17 @@ if ($update) {
         $users_data['users'][$user_id]['last_active'] = date('Y-m-d H:i:s');
         file_put_contents(USERS_FILE, json_encode($users_data, JSON_PRETTY_PRINT));
         
-        // Process commands
+        // Commands process karo
         if (strpos($text, '/') === 0) {
             $parts = explode(' ', $text);
             $command = $parts[0];
             
             if ($command == '/start') {
-                $welcome = "🎬 <b>Welcome to Entertainment Tadka!</b>\n\n";
-                $welcome .= "📢 <b>How to use this bot:</b>\n";
-                $welcome .= "• Simply type any movie name\n";
-                $welcome .= "• Use English or Hindi\n";
-                $welcome .= "• Partial names also work\n\n";
+                $welcome = "🎬 <b>Entertainment Tadka mein aapka swagat hai!</b>\n\n";
+                $welcome .= "📢 <b>Bot kaise use karein:</b>\n";
+                $welcome .= "• Kisi bhi movie ka naam type karein\n";
+                $welcome .= "• English ya Hindi mein likh sakte hain\n";
+                $welcome .= "• Partial names bhi kaam karte hain\n\n";
                 $welcome .= "🔍 <b>Examples:</b>\n";
                 $welcome .= "• Mandala Murders 2025\n";
                 $welcome .= "• Lokah Chapter 1 Chandra 2025\n";
@@ -1103,41 +1300,41 @@ if ($update) {
                 $welcome .= "• IT - Welcome to Derry (2025) S01\n";
                 $welcome .= "• hindi movie\n";
                 $welcome .= "• kgf\n\n";
-                $welcome .= "❌ <b>Don't type:</b>\n";
+                $welcome .= "❌ <b>Na likhein:</b>\n";
                 $welcome .= "• Technical questions\n";
                 $welcome .= "• Player instructions\n";
                 $welcome .= "• Non-movie queries\n\n";
-                $welcome .= "📢 <b>Join Our Channels:</b>\n";
+                $welcome .= "📢 <b>Hamare Channels Join Karein:</b>\n";
                 $welcome .= "🍿 Main: @EntertainmentTadka786\n";
                 $welcome .= "📥 Requests: @EntertainmentTadka7860\n";
                 $welcome .= "🎭 Theater Prints: @threater_print_movies\n";
                 $welcome .= "🔒 Backup: @ETBackup\n\n";
-                $welcome .= "💬 <b>Need help?</b> Use /help for all commands\n\n";
-                $welcome .= "🔍 <b>Start by typing a movie name!</b>";
+                $welcome .= "💬 <b>Help chahiye?</b> /help use karein\n\n";
+                $welcome .= "🔍 <b>Movie ka naam type karke start karein!</b>";
                 
                 sendMessage($chat_id, $welcome, null, 'HTML');
             }
             elseif ($command == '/help') {
                 $help = "🤖 <b>Entertainment Tadka Bot - Complete Guide</b>\n\n";
-                $help .= "📢 <b>Our Channels:</b>\n";
+                $help .= "📢 <b>Hamare Channels:</b>\n";
                 $help .= "🍿 Main: @EntertainmentTadka786 - Latest movies\n";
                 $help .= "📥 Requests: @EntertainmentTadka7860 - Support & requests\n";
                 $help .= "🎭 Theater: @threater_print_movies - HD prints\n";
                 $help .= "🔒 Backup: @ETBackup - Data protection\n\n";
                 $help .= "🎯 <b>Search Commands:</b>\n";
-                $help .= "• Just type movie name - Smart search\n\n";
+                $help .= "• Bas movie ka naam type karein - Smart search\n\n";
                 $help .= "📁 <b>Browse Commands:</b>\n";
-                $help .= "• /totalupload - All movies\n\n";
+                $help .= "• /totalupload - Saari movies dekhein\n\n";
                 $help .= "📝 <b>Request Commands:</b>\n";
-                $help .= "• /request movie - Request movie\n";
-                $help .= "• /myrequests - Request status\n";
-                $help .= "• Join @EntertainmentTadka7860 for support\n\n";
+                $help .= "• /request movie - Movie request karein\n";
+                $help .= "• /myrequests - Request status dekhein\n";
+                $help .= "• @EntertainmentTadka7860 join karein support ke liye\n\n";
                 $help .= "🔗 <b>Channel Commands:</b>\n";
-                $help .= "• /mainchannel - Main channel\n";
-                $help .= "• /requestchannel - Requests\n";
+                $help .= "• /mainchannel - Main channel info\n";
+                $help .= "• /requestchannel - Requests channel\n";
                 $help .= "• /theaterchannel - Theater prints\n";
                 $help .= "• /backupchannel - Backup info\n\n";
-                $help .= "💡 <b>Tip:</b> Just type any movie name to search!";
+                $help .= "💡 <b>Tip:</b> Bas koi bhi movie ka naam type karein search ke liye!";
                 
                 sendMessage($chat_id, $help, null, 'HTML');
             }
@@ -1154,12 +1351,12 @@ if ($update) {
                         $msg .= "• $date: <b>$count movies</b>\n";
                     }
                 } else {
-                    $msg .= "No date information available.\n";
+                    $msg .= "Date information available nahi hai.\n";
                 }
                 
                 $msg .= "\n📢 <b>Total Movies:</b> " . count(load_movies_from_csv()) . "\n";
                 $msg .= "📊 <b>Last Updated:</b> " . date('d-m-Y H:i:s') . "\n\n";
-                $msg .= "🎬 Use /totalupload to browse all movies";
+                $msg .= "🎬 /totalupload use karein saari movies browse karne ke liye";
                 
                 sendMessage($chat_id, $msg, null, 'HTML');
             }
@@ -1176,13 +1373,13 @@ if ($update) {
                     }
                     
                     if (count($movies) > 5) {
-                        $msg .= "... and " . (count($movies) - 5) . " more\n";
+                        $msg .= "... aur " . (count($movies) - 5) . " aur\n";
                     }
                 } else {
-                    $msg .= "❌ <b>No movies found in CSV!</b>\n";
+                    $msg .= "❌ <b>CSV mein koi movies nahi hain!</b>\n";
                 }
                 
-                $msg .= "\n📢 Use /checkcsv all for complete list";
+                $msg .= "\n📢 /checkcsv all use karein complete list ke liye";
                 sendMessage($chat_id, $msg, null, 'HTML');
             }
             elseif ($command == '/checkcsv') {
@@ -1190,15 +1387,15 @@ if ($update) {
                 $movies = load_movies_from_csv();
                 
                 if ($show_all) {
-                    $msg = "📋 <b>All Movies in CSV</b>\n\n";
+                    $msg = "📋 <b>CSV Mein Saari Movies</b>\n\n";
                     $msg .= "📊 <b>Total:</b> " . count($movies) . " movies\n\n";
                     
                     foreach ($movies as $index => $movie) {
                         $msg .= ($index + 1) . ". " . $movie['movie_name'] . "\n";
                         
-                        // Break if message gets too long
+                        // Break agar message bahut lamba ho jaye
                         if (strlen($msg) > 3500) {
-                            $msg .= "... and " . (count($movies) - $index - 1) . " more";
+                            $msg .= "... aur " . (count($movies) - $index - 1) . " aur";
                             break;
                         }
                     }
@@ -1208,7 +1405,7 @@ if ($update) {
                     $msg .= "📄 <b>File:</b> " . CSV_FILE . "\n";
                     $msg .= "🔧 <b>Format:</b> " . CSV_FORMAT . "\n";
                     $msg .= "⏰ <b>Last Modified:</b> " . date('d-m-Y H:i:s', filemtime(CSV_FILE)) . "\n\n";
-                    $msg .= "📝 Use <code>/checkcsv all</code> to see all movies";
+                    $msg .= "📝 <code>/checkcsv all</code> use karein saari movies dekhne ke liye";
                 }
                 
                 sendMessage($chat_id, $msg, null, 'HTML');
@@ -1217,31 +1414,31 @@ if ($update) {
                 $movie_name = isset($parts[1]) ? implode(' ', array_slice($parts, 1)) : '';
                 
                 if (empty($movie_name)) {
-                    $msg = "📝 <b>How to request a movie:</b>\n\n";
+                    $msg = "📝 <b>Movie request kaise karein:</b>\n\n";
                     $msg .= "Usage: <code>/request Movie Name</code>\n\n";
                     $msg .= "Example: <code>/request KGF 3 hindi movie</code>\n\n";
                     $msg .= "📢 Join: @EntertainmentTadka7860\n";
-                    $msg .= "🔔 We'll notify when it's added!";
+                    $msg .= "🔔 Hum notify kar denge jab add ho jayegi!";
                     
                     sendMessage($chat_id, $msg, null, 'HTML');
                 } else {
-                    // Save request to database
+                    // Request database mein save karo
                     $request_id = save_movie_request($user_id, $user_name, $movie_name);
                     
-                    $msg = "✅ <b>Request Submitted Successfully!</b>\n\n";
+                    $msg = "✅ <b>Request Successfully Submit Ho Gayi!</b>\n\n";
                     $msg .= "🎬 <b>Movie:</b> " . htmlspecialchars($movie_name) . "\n";
                     $msg .= "📋 <b>Request ID:</b> <code>$request_id</code>\n";
                     $msg .= "👤 <b>Requested by:</b> $user_name\n";
                     $msg .= "⏰ <b>Time:</b> " . date('H:i:s') . "\n";
                     $msg .= "📊 <b>Status:</b> ⏳ Pending\n\n";
-                    $msg .= "📢 We'll add it soon!\n";
-                    $msg .= "💬 Join: @EntertainmentTadka7860 for updates\n";
-                    $msg .= "🔍 Check status: /myrequests";
+                    $msg .= "📢 Hum jaldi add kar denge!\n";
+                    $msg .= "💬 Updates ke liye: @EntertainmentTadka7860\n";
+                    $msg .= "🔍 Status check: /myrequests";
                     
                     sendMessage($chat_id, $msg, null, 'HTML');
                     
-                    // Notify owner
-                    $admin_msg = "📥 <b>New Movie Request</b>\n\n";
+                    // Owner ko notify karo
+                    $admin_msg = "📥 <b>Nayi Movie Request</b>\n\n";
                     $admin_msg .= "🎬 <b>Movie:</b> " . htmlspecialchars($movie_name) . "\n";
                     $admin_msg .= "📋 <b>Request ID:</b> $request_id\n";
                     $admin_msg .= "👤 <b>From:</b> $user_name\n";
@@ -1251,7 +1448,7 @@ if ($update) {
                     
                     sendMessage(OWNER_ID, $admin_msg, null, 'HTML');
                     
-                    // Update user stats
+                    // User stats update karo
                     $users_data = json_decode(file_get_contents(USERS_FILE), true);
                     if (isset($users_data['users'][$user_id])) {
                         $users_data['users'][$user_id]['total_requests'] = 
@@ -1264,9 +1461,9 @@ if ($update) {
                 $user_requests = get_user_requests($user_id);
                 
                 if (empty($user_requests)) {
-                    $msg = "📭 <b>No Requests Found</b>\n\n";
-                    $msg .= "You haven't made any requests yet.\n\n";
-                    $msg .= "🎬 <b>To request a movie:</b>\n";
+                    $msg = "📭 <b>Koi Requests Nahin Mili</b>\n\n";
+                    $msg .= "Aapne abhi tak koi request nahin ki hai.\n\n";
+                    $msg .= "🎬 <b>Movie request karne ke liye:</b>\n";
                     $msg .= "Use: <code>/request Movie Name</code>\n\n";
                     $msg .= "Example: <code>/request Avengers Endgame hindi</code>\n\n";
                     $msg .= "📢 Join: @EntertainmentTadka7860";
@@ -1275,7 +1472,7 @@ if ($update) {
                     return;
                 }
                 
-                $msg = "📋 <b>Your Movie Requests</b>\n\n";
+                $msg = "📋 <b>Aapki Movie Requests</b>\n\n";
                 
                 $pending_count = 0;
                 $completed_count = 0;
@@ -1309,7 +1506,7 @@ if ($update) {
                 $msg .= "⏳ Pending: $pending_count\n";
                 $msg .= "🎬 Completed: $completed_count\n";
                 $msg .= "📋 Total: " . count($user_requests) . "\n\n";
-                $msg .= "📢 Join: @EntertainmentTadka7860 for updates";
+                $msg .= "📢 Updates ke liye: @EntertainmentTadka7860";
                 
                 sendMessage($chat_id, $msg, null, 'HTML');
             }
@@ -1355,7 +1552,7 @@ if ($update) {
             elseif ($command == '/backupchannel') {
                 $msg = "🔒 <b>Backup Channel</b>\n\n";
                 $msg .= "📢 <b>@ETBackup</b>\n";
-                $msg .= "• Backup of all movies\n";
+                $msg .= "• Sabhi movies ka backup\n";
                 $msg .= "• Data protection\n";
                 $msg .= "• Emergency access\n";
                 $msg .= "• Redundant storage\n\n";
@@ -1407,22 +1604,22 @@ if ($update) {
                 $msg .= "/requestchannel - Request channel\n";
                 $msg .= "/theaterchannel - Theater prints\n";
                 $msg .= "/backupchannel - Backup channel\n\n";
-                $msg .= "💡 <b>Just type a movie name to search!</b>";
+                $msg .= "💡 <b>Movie ka naam type karke search karein!</b>";
                 
                 sendMessage($chat_id, $msg, null, 'HTML');
             }
         }
         elseif (!empty(trim($text))) {
-            // Search for movie
+            // Movie search karo
             advanced_search($chat_id, $text, $user_id);
             
-            // Update stats
+            // Stats update karo
             $stats = json_decode(file_get_contents(STATS_FILE), true);
             $stats['total_searches'] = ($stats['total_searches'] ?? 0) + 1;
             $stats['last_updated'] = date('Y-m-d H:i:s');
             file_put_contents(STATS_FILE, json_encode($stats, JSON_PRETTY_PRINT));
             
-            // Update user stats
+            // User stats update karo
             $users_data = json_decode(file_get_contents(USERS_FILE), true);
             if (isset($users_data['users'][$user_id])) {
                 $users_data['users'][$user_id]['total_searches'] = 
@@ -1442,7 +1639,7 @@ if ($update) {
         
         answerCallbackQuery($query['id'], "Processing...");
         
-        // Handle pagination
+        // Pagination handle karo
         if (strpos($data, 'tu_prev_') === 0) {
             $page = (int) str_replace('tu_prev_', '', $data);
             totalupload_controller($chat_id, $page);
@@ -1456,11 +1653,11 @@ if ($update) {
             $all_movies = get_all_movies_list();
             $pg = paginate_movies($all_movies, $page);
             
-            // Send current page movies
+            // Current page ki movies send karo
             forward_page_movies($chat_id, $pg['slice']);
             
-            // Update message
-            $msg = "✅ <b>Sent page $page</b>\n\n";
+            // Message update karo
+            $msg = "✅ <b>Page $page send ho gayi</b>\n\n";
             $msg .= "🎬 <b>Movies sent:</b> " . count($pg['slice']) . "\n";
             $msg .= "📄 <b>Page:</b> $page/{$pg['total_pages']}\n\n";
             $msg .= "📢 Join: @EntertainmentTadka786";
@@ -1472,7 +1669,7 @@ if ($update) {
         }
         elseif (strpos($data, 'movie_') === 0) {
             $movie_name = str_replace('movie_', '', $data);
-            $found = smart_search($movie_name);
+            $found = smart_search_improved($movie_name);
             
             if (!empty($found)) {
                 $entries = $found[$movie_name]['entries'] ?? [];
@@ -1482,13 +1679,51 @@ if ($update) {
                         usleep(200000);
                     }
                     
-                    $msg = "✅ <b>Sent all videos for:</b> " . htmlspecialchars($movie_name) . "\n";
+                    $msg = "✅ <b>Saare videos send ho gaye:</b> " . htmlspecialchars($movie_name) . "\n";
                     $msg .= "🎬 <b>Total videos:</b> " . count($entries) . "\n\n";
                     $msg .= "📢 Join: @EntertainmentTadka786";
                     
                     editMessage($chat_id, $message, $msg, null, 'HTML');
                 }
             }
+        }
+        // Smart suggestions handle karo
+        elseif (strpos($data, 'suggest:') === 0) {
+            $movie_name = urldecode(str_replace('suggest:', '', $data));
+            
+            // Is movie ko search karo aur send karo
+            $results = smart_search_improved($movie_name);
+            
+            if (!empty($results)) {
+                // Suggestion message delete karo
+                deleteMessage($chat_id, $message_id);
+                
+                // Saare matches send karo
+                $sent_count = 0;
+                foreach ($results as $result) {
+                    if (deliver_item_to_chat($chat_id, $result['item'])) {
+                        $sent_count++;
+                        usleep(200000); // 0.2s delay
+                    }
+                }
+                
+                // Summary show karo
+                $summary = "✅ <b>$sent_count items send ho gaye</b>\n\n";
+                $summary .= "🎬 <b>Movie:</b> " . htmlspecialchars($movie_name) . "\n";
+                $summary .= "📊 <b>Total matches:</b> " . count($results) . "\n";
+                $summary .= "📤 <b>Successfully sent:</b> $sent_count\n\n";
+                $summary .= "🔍 <b>Search again?</b> Koi aur movie ka naam type karein!";
+                
+                sendMessage($chat_id, $summary, null, 'HTML');
+            }
+        }
+        elseif ($data === 'search_again') {
+            // Naye search ke liye puchho
+            deleteMessage($chat_id, $message_id);
+            sendMessage($chat_id, "🔍 <b>Movie ka naam type karein search karne ke liye:</b>\n\nExample: <code>kgf hindi</code>", null, 'HTML');
+        }
+        elseif ($data === 'cancel_suggest') {
+            deleteMessage($chat_id, $message_id);
         }
     }
     
@@ -1501,13 +1736,15 @@ if ($update) {
     }
 }
 
-// ==================== PAGINATION CONTROLLER ====================
+// ============================================
+// 📄 PAGINATION CONTROLLER
+// ============================================
 function totalupload_controller($chat_id, $page = 1) {
     $all = get_all_movies_list();
     if (empty($all)) {
-        $msg = "📭 <b>No Movies Found!</b>\n\n";
-        $msg .= "🎬 Database is empty\n";
-        $msg .= "📢 Add movies to channels\n";
+        $msg = "📭 <b>Koi Movies Nahin Mili!</b>\n\n";
+        $msg .= "🎬 Database empty hai\n";
+        $msg .= "📢 Channels mein movies add karein\n";
         $msg .= "💬 Join: @EntertainmentTadka7860";
         sendMessage($chat_id, $msg, null, 'HTML');
         return;
@@ -1515,7 +1752,7 @@ function totalupload_controller($chat_id, $page = 1) {
     
     $pg = paginate_movies($all, (int)$page);
     
-    // Forward current page movies
+    // Current page ki movies forward karo
     forward_page_movies($chat_id, $pg['slice']);
     
     // Better formatted message
@@ -1534,76 +1771,94 @@ function totalupload_controller($chat_id, $page = 1) {
         $i++;
     }
     
-    $title .= "\n📍 <b>Navigation:</b> Use buttons below";
+    $title .= "\n📍 <b>Navigation:</b> Neeche ke buttons use karein";
     $title .= "\n📢 <b>Join:</b> @EntertainmentTadka786";
     
     $kb = build_totalupload_keyboard($pg['page'], $pg['total_pages']);
     sendMessage($chat_id, $title, $kb, 'HTML');
 }
 
-// ==================== WEBHOOK SETUP ====================
+// ============================================
+// 🌐 WEBHOOK SETUP
+// ============================================
 if (php_sapi_name() === 'cli' || isset($_GET['setwebhook'])) {
     $webhook_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . 
                    "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
     
     $result = apiRequest('setWebhook', ['url' => $webhook_url]);
+    $result_data = json_decode($result, true);
     
     echo "<!DOCTYPE html>
     <html>
     <head>
-        <title>🚀 Webhook Setup</title>
+        <title>🚀 Webhook Setup - Entertainment Tadka</title>
         <style>
             body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-            .success { color: green; }
-            .error { color: red; }
-            .info { color: blue; }
+            .success { color: green; padding: 10px; background: #d4edda; border-radius: 5px; }
+            .error { color: red; padding: 10px; background: #f8d7da; border-radius: 5px; }
+            .info { color: blue; padding: 10px; background: #d1ecf1; border-radius: 5px; }
             ul { line-height: 1.8; }
+            .btn { display: inline-block; padding: 10px 20px; background: #0088cc; color: white; 
+                   text-decoration: none; border-radius: 5px; margin: 5px; }
         </style>
     </head>
     <body>
-        <h1>🚀 Webhook Setup</h1>
-        <h2>📊 Configuration Status:</h2>
+        <h1>🚀 Entertainment Tadka Bot Webhook Setup</h1>
         
-        <h3>✅ Active Channels (" . count($ACTIVE_CHANNELS) . "):</h3>
-        <ul>";
+        <h2>📊 Configuration Status:</h2>";
+    
+    if (isset($result_data['ok']) && $result_data['ok']) {
+        echo "<div class='success'>✅ Webhook successfully set!</div>";
+    } else {
+        echo "<div class='error'>❌ Webhook setup failed</div>";
+        echo "<p><em>Error details hidden for security</em></p>";
+    }
+    
+    echo "<div class='info'>
+            <h3>✅ Active Channels (" . count($ACTIVE_CHANNELS) . "):</h3>
+            <ul>";
     
     foreach ($ACTIVE_CHANNELS as $channel) {
         echo "<li>{$channel['name']} ({$channel['id']})</li>";
     }
     
     echo "</ul>
+        </div>
+        
         <h3>❌ Inactive Channels (" . count($PRIVATE_CHANNELS) . "):</h3>
-        <p><em>Private channels are disabled in configuration</em></p>
+        <p><em>Private channels disabled hain configuration mein</em></p>
         
         <h3>👥 Request Group:</h3>
         <p>@EntertainmentTadka7860 ($REQUEST_GROUP_ID)</p>
         
-        <h3>📁 CSV Format:</h3>
+        <h3>📁 CSV Format (LOCKED):</h3>
         <p><code>" . CSV_FORMAT . "</code></p>
-        
-        <h3>🔧 Webhook Result:</h3>
-        <pre>" . htmlspecialchars($result) . "</pre>
         
         <h3>🎯 Next Steps:</h3>
         <ol>
-            <li>Add bot to all channels as admin</li>
-            <li>Test by searching a movie</li>
-            <li>Check request group functionality</li>
-            <li>Test theater channel forwarding</li>
+            <li>Bot ko sabhi channels mein admin banao</li>
+            <li>Movie search test karo</li>
+            <li>Request group functionality test karo</li>
+            <li>Theater channel forwarding test karo</li>
         </ol>
         
         <h3>🔍 Test Links:</h3>
-        <p><a href='check_config.php'>Check Configuration</a></p>
-        <p><a href='migrate_csv.php'>Migrate CSV</a></p>
-        <p><a href='logs.php'>View Logs</a></p>
+        <a href='check_config.php' class='btn'>🔧 Check Configuration</a>
+        <a href='migrate_csv.php' class='btn'>🔄 Migrate CSV</a>
+        <a href='logs.php' class='btn'>📝 View Logs</a>
+        
+        <h3>📞 Support:</h3>
+        <p>Contact: @EntertainmentTadka7860</p>
     </body>
     </html>";
     
     exit;
 }
 
-// ==================== DEFAULT PAGE ====================
-if (!$update) {
+// ============================================
+// 🏠 DEFAULT PAGE
+// ============================================
+if (php_sapi_name() !== 'cli' && !isset($_GET['setwebhook']) && empty($update)) {
     echo "<!DOCTYPE html>
     <html>
     <head>
@@ -1631,16 +1886,17 @@ if (!$update) {
             <p><strong>Public Channels:</strong> " . count($PUBLIC_CHANNELS) . " (Active)</p>
             <p><strong>Private Channels:</strong> " . count($PRIVATE_CHANNELS) . " (Inactive)</p>
             <p><strong>Request Group:</strong> Active</p>
-            <p><strong>CSV Format:</strong> " . CSV_FORMAT . "</p>
+            <p><strong>CSV Format:</strong> " . CSV_FORMAT . " (LOCKED)</p>
+            <p><strong>Smart Suggestions:</strong> " . (ENABLE_SMART_SUGGESTIONS ? 'ON' : 'OFF') . "</p>
             <p><strong>Typing Indicator:</strong> " . (ENABLE_TYPING_INDICATOR ? 'ON' : 'OFF') . "</p>
             <p><strong>Hide Private Channels:</strong> " . (HIDE_PRIVATE_CHANNELS ? 'ON' : 'OFF') . "</p>
         </div>
         
         <div class='status warning'>
             <h3>🔧 Configuration Required</h3>
-            <p>1. Edit .env file and add BOT_TOKEN</p>
-            <p>2. Set webhook using button below</p>
-            <p>3. Add bot to channels as admin</p>
+            <p>1. .env file edit karo aur BOT_TOKEN add karo</p>
+            <p>2. Webhook set karo using button below</p>
+            <p>3. Bot ko channels mein admin banao</p>
         </div>
         
         <div>
@@ -1658,17 +1914,32 @@ if (!$update) {
     }
     
     echo "</ul>
-        <p><em>Private channels are disabled in configuration</em></p>
+        <p><em>Private channels disabled hain configuration mein</em></p>
         
         <h3>💬 Request Group:</h3>
         <p>@EntertainmentTadka7860 ($REQUEST_GROUP_ID)</p>
         
         <h3>🔧 Group Behavior:</h3>
         <ul>
-            <li><strong>Request Group:</strong> Only /request commands are handled</li>
-            <li><strong>Other Groups:</strong> Movie names trigger search & forwarding</li>
-            <li><strong>Private Chats:</strong> Full functionality available</li>
+            <li><strong>Request Group:</strong> Sirf /request commands handle hongi</li>
+            <li><strong>Other Groups:</strong> Movie names search & forwarding trigger karenge</li>
+            <li><strong>Private Chats:</strong> Full functionality available hai</li>
         </ul>
+        
+        <h3>🎯 Features:</h3>
+        <ul>
+            <li>Smart Search with suggestions</li>
+            <li>Theater prints filtering</li>
+            <li>Language filtering (Hindi/English)</li>
+            <li>Pagination for browsing</li>
+            <li>Request system</li>
+            <li>Auto-backup system</li>
+        </ul>
+        
+        <hr>
+        <p><strong>📞 Support:</strong> @EntertainmentTadka7860</p>
+        <p><strong>📢 Main Channel:</strong> @EntertainmentTadka786</p>
+        <p><em>Entertainment Tadka - Best Movie Collection</em></p>
     </body>
     </html>";
 }
