@@ -16,6 +16,7 @@ services:
       # REQUIRED - Set in Render Dashboard Secrets
       - key: BOT_TOKEN
         sync: false
+        generateValue: true
       
       # Channel Configuration
       - key: MAIN_CHANNEL_ID
@@ -27,7 +28,7 @@ services:
       - key: REQUEST_GROUP_ID
         value: -1003083386043
       
-      # Private Channels (Disabled by default)
+      # Private Channels (Disabled by default to match index.php)
       - key: PRIVATE_CHANNEL_1
         value: -1003251791991
       - key: PRIVATE_CHANNEL_2
@@ -40,22 +41,20 @@ services:
         value: "1080317415"
       - key: BOT_USERNAME
         value: "@EntertainmentTadkaBot"
-      - key: API_ID
-        value: "21944581"
-      - key: API_HASH
-        value: "7b1c174a5cd3466e25a976c39a791737"
       
-      # Feature Toggles
+      # Feature Toggles - SYNCED WITH index.php
       - key: ENABLE_TYPING_INDICATOR
         value: "true"
       - key: ENABLE_PUBLIC_CHANNELS
         value: "true"
       - key: ENABLE_PRIVATE_CHANNELS
-        value: "true"
+        value: "false"  # ✅ Now matches index.php default
       - key: MAINTENANCE_MODE
         value: "false"
       - key: LOG_FORWARDS
         value: "true"
+      - key: HIDE_PRIVATE_CHANNELS
+        value: "true"  # ✅ Added missing variable
       
       # File Configuration
       - key: CSV_FILE
@@ -66,6 +65,8 @@ services:
         value: "users.json"
       - key: STATS_FILE
         value: "bot_stats.json"
+      - key: REQUESTS_FILE
+        value: "requests.json"  # ✅ Added missing
       - key: BACKUP_DIR
         value: "backups/"
       
@@ -76,7 +77,7 @@ services:
         value: "5"
     
     # Health check
-    healthCheckPath: /
+    healthCheckPath: /check_config.php
     healthCheckTimeout: 10
     
     # Resources
@@ -88,14 +89,13 @@ services:
     # Auto-deploy
     autoDeploy: true
     
-    # Domains (optional)
+    # Domains
     domains:
       - entertainment-tadka-bot.onrender.com
-    
-    # Notifications (optional)
-    # notifications:
-    #   - type: slack
-    #     channel: deployments
-    #     events:
-    #       - deploy_succeeded
-    #       - deploy_failed
+
+# Cron jobs for auto-backup (optional)
+# jobs:
+#   - name: daily-backup
+#     plan: free
+#     schedule: "0 0 * * *"
+#     command: curl https://entertainment-tadka-bot.onrender.com/index.php?backup=1
