@@ -8,12 +8,20 @@
       "joined": "2024-01-01 00:00:00",
       "last_active": "2025-02-03 14:30:00",
       "total_searches": 45,
+      "total_requests": 2,
       "points": 100,
       "is_admin": true,
       "preferences": {
         "language": "english",
         "notifications": true,
         "daily_digest": true
+      },
+      "activity_stats": {
+        "searches_today": 3,
+        "searches_week": 15,
+        "searches_month": 45,
+        "last_search": "KGF",
+        "favorite_category": "Action"
       }
     },
     "123456789": {
@@ -22,6 +30,7 @@
       "joined": "2025-01-15 10:30:00",
       "last_active": "2025-02-03 12:45:00",
       "total_searches": 15,
+      "total_requests": 1,
       "points": 75,
       "is_admin": false,
       "preferences": {
@@ -35,6 +44,7 @@
       "joined": "2025-01-20 14:20:00",
       "last_active": "2025-02-03 10:15:00",
       "total_searches": 28,
+      "total_requests": 1,
       "points": 140,
       "is_admin": false
     },
@@ -45,6 +55,7 @@
       "joined": "2025-01-25 09:10:00",
       "last_active": "2025-02-02 18:30:00",
       "total_searches": 32,
+      "total_requests": 1,
       "points": 160,
       "is_admin": false
     },
@@ -54,12 +65,13 @@
       "joined": "2025-02-01 11:45:00",
       "last_active": "2025-02-03 08:20:00",
       "total_searches": 8,
+      "total_requests": 1,
       "points": 40,
       "is_admin": false
     }
   },
   "total_users": 5,
-  "total_requests": 125,
+  "total_requests": 6,
   "last_updated": "2025-02-03 14:30:00",
   "statistics": {
     "daily_active_users": 15,
@@ -72,16 +84,33 @@
       "pushpa": 38,
       "rrr": 32,
       "avengers": 28,
-      "spider_man": 25
+      "spider_man": 25,
+      "jawan": 22,
+      "animal": 20,
+      "salaar": 18,
+      "dunki": 15,
+      "pathaan": 12
     },
     "peak_hours": ["19:00", "20:00", "21:00"],
-    "average_searches_per_user": 25.5
+    "average_searches_per_user": 25.5,
+    "user_growth": {
+      "daily": 5,
+      "weekly": 25,
+      "monthly": 200
+    }
   },
   "system": {
     "csv_version": "2.0",
     "last_csv_update": "2025-02-03",
-    "bot_version": "3.1.0",
+    "bot_version": "3.2.0",
     "channels_active": 3,
-    "private_channels_active": 0
+    "private_channels_active": 0,
+    "features_enabled": [
+      "smart_search",
+      "did_you_mean",
+      "request_system",
+      "user_analytics",
+      "multi_channel"
+    ]
   }
 }
