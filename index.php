@@ -41,7 +41,11 @@ define('OWNER_ID', (int) ($_ENV['OWNER_ID'] ?? '1080317415'));
 define('MAIN_CHANNEL_ID', $_ENV['MAIN_CHANNEL_ID'] ?? '-1003181705395');
 define('THEATER_CHANNEL_ID', $_ENV['THEATER_CHANNEL_ID'] ?? '-1002831605258');
 define('BACKUP_CHANNEL_ID', $_ENV['BACKUP_CHANNEL_ID'] ?? '-1002964109368');
-define('REQUEST_GROUP_ID', $_ENV['REQUEST_GROUP_ID'] ?? '-1003083386043');
+
+// Fix for undefined REQUEST_GROUP_ID
+if (!defined('REQUEST_GROUP_ID')) {
+    define('REQUEST_GROUP_ID', $_ENV['REQUEST_GROUP_ID'] ?? '-1003083386043');
+}
 
 // Private Channels
 define('PRIVATE_CHANNEL_1', $_ENV['PRIVATE_CHANNEL_1'] ?? '-1003251791991');
@@ -481,6 +485,11 @@ function get_channel_display_name($channel_id) {
 function get_group_info($chat_id) {
     global $GROUPS_CONFIG;
     
+    // First check if REQUEST_GROUP_ID is defined
+    if (!defined('REQUEST_GROUP_ID') || empty(REQUEST_GROUP_ID)) {
+        return null;
+    }
+    
     foreach ($GROUPS_CONFIG as $group) {
         if ($group['id'] == $chat_id) {
             return $group;
@@ -677,6 +686,71 @@ function smart_search($query) {
     return $results;
 }
 
+// ==================== DID YOU MEAN SUGGESTION ====================
+function did_you_mean_suggestion($query) {
+    global $movie_messages;
+    
+    if (empty($movie_messages)) {
+        get_cached_movies();
+    }
+    
+    $query_lower = strtolower(trim($query));
+    $best_match = '';
+    $best_score = 0;
+    
+    foreach ($movie_messages as $movie_name => $entries) {
+        $movie_lower = strtolower($movie_name);
+        
+        // Skip if query too short
+        if (strlen($query_lower) < 3) {
+            continue;
+        }
+        
+        // Calculate similarity score
+        similar_text($query_lower, $movie_lower, $similarity);
+        
+        // Calculate Levenshtein distance score
+        $levenshtein = levenshtein($query_lower, $movie_lower);
+        $max_len = max(strlen($query_lower), strlen($movie_lower));
+        $lev_score = $max_len > 0 ? (1 - ($levenshtein / $max_len)) * 100 : 0;
+        
+        // Take the better score
+        $score = max($similarity, $lev_score);
+        
+        // Extra points for:
+        // 1. Starting with same letter (+10)
+        if (substr($query_lower, 0, 1) == substr($movie_lower, 0, 1)) {
+            $score += 10;
+        }
+        
+        // 2. Containing query words (+5 per word)
+        $query_words = explode(' ', $query_lower);
+        $match_words = 0;
+        foreach ($query_words as $word) {
+            if (strlen($word) > 2 && strpos($movie_lower, $word) !== false) {
+                $match_words++;
+            }
+        }
+        $score += ($match_words * 5);
+        
+        // Update best match
+        if ($score > $best_score && $score > 65) {
+            $best_score = $score;
+            $best_match = $movie_name;
+        }
+    }
+    
+    // Return suggestion if score is good enough
+    if ($best_match && $best_score > 70) {
+        return [
+            'suggestion' => $best_match,
+            'score' => $best_score
+        ];
+    }
+    
+    return false;
+}
+
 function advanced_search($chat_id, $query, $user_id = null) {
     global $movie_messages;
     
@@ -788,17 +862,51 @@ function advanced_search($chat_id, $query, $user_id = null) {
         editMessage($chat_id, $search_message, $summary_msg, null, 'HTML');
         
     } else {
-        $msg = "😔 <b>Movie Not Found!</b>\n\n";
-        $msg .= "🎬 <b>Requested:</b> " . htmlspecialchars($query) . "\n\n";
-        $msg .= "📝 <b>Request it here:</b>\n";
-        $msg .= "@EntertainmentTadka7860\n\n";
-        $msg .= "🔔 <b>I'll notify you when it's added!</b>\n\n";
-        $msg .= "📢 <b>Join our channels:</b>\n";
-        $msg .= "🍿 Main: @EntertainmentTadka786\n";
-        $msg .= "🎭 Theater: @threater_print_movies\n";
-        $msg .= "🔒 Backup: @ETBackup";
+        // 🆕 DID YOU MEAN? FEATURE HERE 🆕
+        $suggestion = did_you_mean_suggestion($query);
         
-        sendMessage($chat_id, $msg, null, 'HTML');
+        if ($suggestion) {
+            // Show "Did you mean?" with suggestion button
+            $msg = "🔍 <b>Did you mean?</b>\n\n";
+            $msg .= "❓ <b>You searched:</b> <code>" . htmlspecialchars($query) . "</code>\n";
+            $msg .= "💡 <b>Suggestion:</b> <code>" . htmlspecialchars($suggestion['suggestion']) . "</code>\n";
+            $msg .= "📊 <b>Confidence:</b> " . round($suggestion['score']) . "%\n\n";
+            $msg .= "📝 Click below to search the suggested movie";
+            
+            // Create inline keyboard with suggestion
+            $keyboard = [
+                'inline_keyboard' => [
+                    [
+                        [
+                            'text' => "🔍 Search: " . htmlspecialchars($suggestion['suggestion']), 
+                            'callback_data' => 'didyoumean_' . urlencode($suggestion['suggestion'])
+                        ]
+                    ],
+                    [
+                        [
+                            'text' => "📝 Request This Movie", 
+                            'callback_data' => 'request_' . urlencode($suggestion['suggestion'])
+                        ]
+                    ]
+                ]
+            ];
+            
+            sendMessage($chat_id, $msg, $keyboard, 'HTML');
+            
+        } else {
+            // Original "not found" message
+            $msg = "😔 <b>Movie Not Found!</b>\n\n";
+            $msg .= "🎬 <b>Requested:</b> " . htmlspecialchars($query) . "\n\n";
+            $msg .= "📝 <b>Request it here:</b>\n";
+            $msg .= "@EntertainmentTadka7860\n\n";
+            $msg .= "🔔 <b>I'll notify you when it's added!</b>\n\n";
+            $msg .= "📢 <b>Join our channels:</b>\n";
+            $msg .= "🍿 Main: @EntertainmentTadka786\n";
+            $msg .= "🎭 Theater: @threater_print_movies\n";
+            $msg .= "🔒 Backup: @ETBackup";
+            
+            sendMessage($chat_id, $msg, null, 'HTML');
+        }
     }
 }
 
@@ -1044,9 +1152,12 @@ if ($update) {
         // Show typing indicator
         sendTypingAction($chat_id);
         
-        // Check group type
-        $group_info = get_group_info($chat_id);
-        
+        // Check group type - FIRST check if REQUEST_GROUP_ID is defined
+        $group_info = null;
+        if (defined('REQUEST_GROUP_ID') && !empty(REQUEST_GROUP_ID)) {
+            $group_info = get_group_info($chat_id);
+        }
+
         if ($group_info) {
             // It's a configured group
             if ($group_info['type'] == 'request_only') {
@@ -1055,14 +1166,8 @@ if ($update) {
                     handle_request_group($message);
                     exit;
                 } else {
-                    // For ALL other messages in request group (including movie names)
-                    // Process as NORMAL SEARCH
-                    if (!empty(trim($text)) && strpos($text, '/') !== 0) {
-                        // This is where movie names in request group will be processed
-                        advanced_search($chat_id, $text, $user_id);
-                        exit;
-                    }
-                    // Ignore other messages
+                    // For ALL OTHER messages in request group (including movie names)
+                    // IGNORE them completely
                     exit;
                 }
             }
@@ -1470,24 +1575,50 @@ if ($update) {
         elseif ($data === 'tu_stop') {
             deleteMessage($chat_id, $message_id);
         }
-        elseif (strpos($data, 'movie_') === 0) {
-            $movie_name = str_replace('movie_', '', $data);
-            $found = smart_search($movie_name);
+        // Did You Mean? callback handler
+        elseif (strpos($data, 'didyoumean_') === 0) {
+            $suggested_movie = urldecode(str_replace('didyoumean_', '', $data));
             
-            if (!empty($found)) {
-                $entries = $found[$movie_name]['entries'] ?? [];
-                if (!empty($entries)) {
-                    foreach ($entries as $entry) {
-                        deliver_item_to_chat($chat_id, $entry);
-                        usleep(200000);
-                    }
-                    
-                    $msg = "✅ <b>Sent all videos for:</b> " . htmlspecialchars($movie_name) . "\n";
-                    $msg .= "🎬 <b>Total videos:</b> " . count($entries) . "\n\n";
-                    $msg .= "📢 Join: @EntertainmentTadka786";
-                    
-                    editMessage($chat_id, $message, $msg, null, 'HTML');
-                }
+            // Delete the suggestion message
+            deleteMessage($chat_id, $message_id);
+            
+            // Search for the suggested movie
+            advanced_search($chat_id, $suggested_movie);
+        }
+        // Request suggested movie
+        elseif (strpos($data, 'request_') === 0) {
+            $movie_to_request = urldecode(str_replace('request_', '', $data));
+            
+            // Delete the suggestion message
+            deleteMessage($chat_id, $message_id);
+            
+            // Show request message
+            $user_name = $query['from']['first_name'] ?? 'User';
+            $user_id = $query['from']['id'] ?? 0;
+            
+            $request_id = save_movie_request($user_id, $user_name, $movie_to_request);
+            
+            $msg = "✅ <b>Request Submitted!</b>\n\n";
+            $msg .= "🎬 <b>Movie:</b> " . htmlspecialchars($movie_to_request) . "\n";
+            $msg .= "📋 <b>From:</b> Did You Mean? suggestion\n";
+            $msg .= "👤 <b>By:</b> $user_name\n";
+            $msg .= "⏰ <b>Time:</b> " . date('H:i:s') . "\n\n";
+            $msg .= "📢 We'll add it soon!\n";
+            $msg .= "💬 Check: @EntertainmentTadka7860";
+            
+            sendMessage($chat_id, $msg, null, 'HTML');
+            
+            // Notify owner
+            if (OWNER_ID) {
+                $admin_msg = "📥 <b>New Request from Suggestion</b>\n\n";
+                $admin_msg .= "🎬 <b>Movie:</b> " . htmlspecialchars($movie_to_request) . "\n";
+                $admin_msg .= "💡 <b>Source:</b> Did You Mean? feature\n";
+                $admin_msg .= "👤 <b>User:</b> $user_name\n";
+                $admin_msg .= "🆔 <b>User ID:</b> $user_id\n";
+                $admin_msg .= "📋 <b>Request ID:</b> $request_id\n\n";
+                $admin_msg .= "📊 <b>Total pending requests:</b> " . get_pending_count();
+                
+                sendMessage(OWNER_ID, $admin_msg, null, 'HTML');
             }
         }
     }
@@ -1631,7 +1762,7 @@ if (!$update) {
             <p><strong>Public Channels:</strong> " . count($PUBLIC_CHANNELS) . " (Active)</p>
             <p><strong>Private Channels:</strong> " . count($PRIVATE_CHANNELS) . " (Inactive)</p>
             <p><strong>Request Group:</strong> Active</p>
-            <p><strong>CSV Format:</strong> " . CSV_FORMAT . "</p>
+            <p><strong>CSV Format:</b> " . CSV_FORMAT . "</p>
             <p><strong>Typing Indicator:</strong> " . (ENABLE_TYPING_INDICATOR ? 'ON' : 'OFF') . "</p>
             <p><strong>Hide Private Channels:</strong> " . (HIDE_PRIVATE_CHANNELS ? 'ON' : 'OFF') . "</p>
         </div>
