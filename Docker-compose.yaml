@@ -15,8 +15,30 @@ services:
       - .env
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "http://localhost/check_config.php"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - app-network
+
+  bot:
+    build: .
+    command: php -S 0.0.0.0:8080 -t .
+    ports:
+      - "8081:8080"
+    volumes:
+      - .:/var/www/html
+      - ./data:/var/www/html/data
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - web
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
