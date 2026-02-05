@@ -124,13 +124,20 @@
     "average_completion_time": "1.5 days"
   },
   "system_info": {
-    "bot_version": "3.1.0",
+    "bot_version": "3.2.0",
     "php_version": "8.2.0",
     "server_os": "Linux",
     "memory_usage": "45.2 MB",
     "disk_usage": "15.8 MB",
     "last_backup": "2025-02-03 00:00:00",
     "csv_file_size": "2.5 MB",
-    "csv_last_modified": "2025-02-03 14:25:00"
+    "csv_last_modified": "2025-02-03 14:25:00",
+    "features": [
+      "multi_channel_support",
+      "smart_search",
+      "did_you_mean_suggestions",
+      "request_system",
+      "user_analytics"
+    ]
   }
 }
